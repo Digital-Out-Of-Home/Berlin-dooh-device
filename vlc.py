@@ -76,8 +76,8 @@ def play_next():
 
 
 if __name__ == "__main__":
-    # Option 1: Use local playlist (default)
-    open_vlc_with_playlist()
+    # Option 1: Use local playlist with GUI (for video playback)
+    open_vlc_with_playlist(headless=False)
     
     # Option 2: Use a URL
     # open_vlc_with_playlist("https://example.com/playlist.m3u")
