@@ -7,6 +7,7 @@ from pathlib import Path
 from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedirectHandler
 
 DROPBOX_URL = "https://www.dropbox.com/scl/fo/c98dl5jsxp3ae90yx9ww4/AD3YT1lVanI36T3pUaN_crU?rlkey=fzm1pc1qyhl4urkfo7kk3ftss&st=846rj2qj&dl=1"
+HEALTHCHECK_URL = "https://hc-ping.com/da226e90-5bfd-4ada-9f12-71959e346ff1"
 BASE_DIR = Path(__file__).parent
 MEDIA_DIR = BASE_DIR / "media"
 TEMP_DIR = BASE_DIR / ".media_temp"
@@ -54,6 +55,14 @@ def sync():
     shutil.rmtree(MEDIA_DIR, ignore_errors=True)
     TEMP_DIR.rename(MEDIA_DIR)
     print(f"Synced to {MEDIA_DIR}")
+    
+    # Heartbeat ping
+    try:
+        from urllib.request import urlopen
+        urlopen(HEALTHCHECK_URL, timeout=10)
+        print("Heartbeat sent ✓")
+    except Exception as e:
+        print(f"Heartbeat failed: {e}")
 
 
 def play():
