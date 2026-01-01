@@ -16,6 +16,15 @@ VLC = Path("/Applications/VLC.app/Contents/MacOS/VLC") if sys.platform == "darwi
 MAX_RETRIES = 3
 RETRY_DELAY = 1800  # 30 minutes
 
+# Device to Healthchecks.io mapping
+HEALTHCHECK_MAP = {
+    "Device1": "b7f24740-19de-4c83-9398-b4fbfdd213ec",
+    "Device2": "da226e90-5bfd-4ada-9f12-71959e346ff1",
+    "Device3": "7a0a7b43-dbbc-4d0f-89d0-f2bb21df5eb9",
+    "Device4": "523f5911-d774-40df-a033-d1cf40e8cd40",
+    "Device5": "df591d60-bfcc-46da-b061-72b58e9ec9d3",
+}
+
 
 def get_device_id():
     """Get device ID from config file or fall back to hostname."""
@@ -25,6 +34,12 @@ def get_device_id():
             if line.startswith("DEVICE_ID="):
                 return line.split("=", 1)[1].strip()
     return socket.gethostname()
+
+
+def get_healthcheck_url(device_id):
+    """Get Healthchecks.io URL for device, or use default."""
+    check_id = HEALTHCHECK_MAP.get(device_id, HEALTHCHECK_URL.split("/")[-1])
+    return f"https://hc-ping.com/{check_id}"
 
 
 def download_with_retry():
@@ -86,11 +101,11 @@ def sync():
     TEMP_DIR.rename(MEDIA_DIR)
     print(f"Synced to {MEDIA_DIR}")
     
-    # Heartbeat ping with device ID
+    # Heartbeat ping with device-specific check
     try:
         from urllib.request import urlopen
         from urllib.parse import quote
-        ping_url = f"{HEALTHCHECK_URL}?rid={quote(device_id)}"
+        ping_url = f"{get_healthcheck_url(device_id)}?rid={quote(device_id)}"
         urlopen(ping_url, timeout=10)
         print(f"Heartbeat sent ✓ ({device_id})")
     except Exception as e:
