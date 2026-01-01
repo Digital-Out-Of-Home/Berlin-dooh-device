@@ -8,12 +8,27 @@ Syncs media from Dropbox and plays on loop using VLC. Designed for Raspberry Pi 
 curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 ```
 
+You'll be prompted to enter a **device ID** (e.g., `berlin-01`, `screen-lobby`). This ID is used for:
+- System hostname
+- Heartbeat reporting
+- Tailscale (if enabled)
+
+For automated installs:
+```bash
+curl ... | sudo DEVICE_ID=berlin-01 bash
+
+# With Tailscale:
+curl ... | sudo DEVICE_ID=berlin-01 TAILSCALE_KEY=tskey-auth-xxx bash
+```
+
 That's it! The script will:
+- Set the system hostname to your device ID
 - Install VLC if needed
 - Download the player files
 - Set up automatic sync every 5 minutes
 - Install watchdog cron (auto-restart if crashed)
 - Start playing your playlist
+- Optionally install Tailscale for remote access
 
 ## Manual Setup
 
@@ -33,6 +48,7 @@ DROPBOX_URL = "https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1"
 ```bash
 sudo ./install.sh
 ```
+You'll be prompted for a device ID.
 
 ## Usage
 
@@ -56,17 +72,37 @@ journalctl -u vlc-sync -f        # View sync logs
 1. **Sync (every 5 min)**: Downloads your Dropbox folder → extracts to temp → atomic swap to `media/`
 2. **Play**: VLC runs in loop mode, auto-restarts if it crashes
 
+## Device Identification
+
+Each device has a unique ID stored in `/home/pi/vlc-player/.device`. This ID is:
+- Set during installation (prompted or via `DEVICE_ID` env var)
+- Used as the system hostname
+- Included in Healthchecks.io pings for device-level monitoring
+- Used as Tailscale hostname if Tailscale is installed
+
+To check device ID:
+```bash
+cat /home/pi/vlc-player/.device
+```
+
+To change device ID:
+```bash
+echo "DEVICE_ID=new-name" | sudo tee /home/pi/vlc-player/.device
+sudo hostnamectl set-hostname new-name
+sudo tailscale set --hostname=new-name  # if using Tailscale
+```
+
 ## Reliability Features
 
 ### Retry Logic
 If Dropbox download fails (network issues), the sync retries up to 3 times with 30-minute delays between attempts.
 
 ### Heartbeat Monitoring
-After each successful sync, a ping is sent to [Healthchecks.io](https://healthchecks.io). Configure your own URL in `main.py`:
+After each successful sync, a ping is sent to [Healthchecks.io](https://healthchecks.io) with the device ID. Configure your own URL in `main.py`:
 ```python
 HEALTHCHECK_URL = "https://hc-ping.com/YOUR-UUID-HERE"
 ```
-You'll be alerted if a device stops syncing.
+You'll be alerted if a device stops syncing. The device ID appears in the ping for easy identification.
 
 ### Watchdog Cron
 A cron job runs every 5 minutes to check if Python and VLC are running. If either dies or freezes, the service is automatically restarted:
@@ -101,6 +137,7 @@ Dropbox Folder          Raspberry Pi
 ```
 /home/pi/vlc-player/
 ├── main.py              # Core script (sync + play)
+├── .device              # Device ID config
 ├── media/               # Downloaded media (auto-synced)
 │   ├── playlist.m3u
 │   ├── playlist_local.m3u
@@ -133,7 +170,12 @@ curl -I "YOUR_DROPBOX_URL"       # Test URL
 **Display issues?**
 Make sure `DISPLAY=:0` is set. The player runs on the primary display.
 
+**Check device ID?**
+```bash
+cat /home/pi/vlc-player/.device
+hostname
+```
+
 ## License
 
 MIT
-
