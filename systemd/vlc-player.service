@@ -1,0 +1,13 @@
+[Unit]
+Description=VLC Player
+After=vlc-sync.service
+
+[Service]
+User=pi
+Environment=DISPLAY=:0
+ExecStart=/usr/bin/python3 /home/pi/vlc-player/main.py play
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

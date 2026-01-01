@@ -1,0 +1,9 @@
+[Unit]
+Description=Sync media from Dropbox
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=pi
+ExecStart=/usr/bin/python3 /home/pi/vlc-player/main.py sync
