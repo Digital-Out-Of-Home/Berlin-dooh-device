@@ -17,13 +17,25 @@ For automated installs:
 curl ... | sudo DEVICE_ID=berlin-01 bash
 ```
 
-That's it! The script will:
+That's it! The bootstrap script follows a 3-step process:
+
+**Step 1: Download All Files**
 - Set the system hostname to your device ID
 - Install VLC if needed
-- Download the player files
-- Set up automatic sync every 5 minutes
+- Download code files from GitHub
+- Sync media from Dropbox (immediate, not waiting for timer)
+- Check for code updates from GitHub
+
+**Step 2: Setup Cron Jobs and Watchdogs**
+- Install systemd services
 - Install watchdog cron (auto-restart if crashed)
-- Start playing your playlist
+
+**Step 3: Start VLC Player**
+- Verify playlist is ready
+- Start VLC player with playlist
+- Start maintenance timer for future syncs
+
+The player starts playing immediately after all files are downloaded and synced!
 
 ## Manual Setup
 
@@ -62,6 +74,12 @@ journalctl -u vlc-maintenance -f         # View maintenance logs
 
 ## How It Works
 
+### Bootstrap Process (First Install)
+1. **Downloads**: Installs VLC, downloads code from GitHub, syncs media from Dropbox
+2. **Setup**: Installs systemd services and watchdog cron
+3. **Start**: Launches VLC player with playlist (only after everything is ready)
+
+### Runtime Operation
 1. **Maintenance (every 5 min)**: Syncs media from Dropbox AND checks for code updates
    - Downloads Dropbox folder → extracts to temp → atomic swap to `media/`
    - Checks GitHub for new version → downloads and installs if available
