@@ -42,15 +42,13 @@ echo "Setting up device: $DEVICE_ID"
 echo "Setting hostname to $DEVICE_ID..."
 hostnamectl set-hostname "$DEVICE_ID"
 
-# Install VLC and codec packages
-echo "[1/3] Installing VLC and codecs..."
+# Install VLC if missing
+echo "[1/3] Installing VLC..."
 if ! command -v vlc &> /dev/null; then
-    apt update && apt install -y vlc vlc-plugin-base libavcodec-extra
+    apt update && apt install -y vlc
     echo "VLC installed ✓"
 else
     echo "VLC already installed ✓"
-    # Still install codec packages if missing
-    apt install -y vlc-plugin-base libavcodec-extra 2>/dev/null || true
 fi
 
 # Create directory
