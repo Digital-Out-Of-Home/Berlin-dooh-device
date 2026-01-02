@@ -1,7 +1,7 @@
 #!/bin/bash
 # Bootstrap VLC Player for Raspberry Pi
 # Run: curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
-# Or with device ID: curl ... | sudo DEVICE_ID=berlin-01 bash
+# Default device ID: berlin1 (override with: curl ... | sudo DEVICE_ID=berlin-02 bash)
 set -e
 
 REPO="https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main"

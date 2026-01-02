@@ -4,17 +4,23 @@ Syncs media from Dropbox and plays on loop using VLC. Designed for Raspberry Pi 
 
 ## Quick Install (Raspberry Pi)
 
+**Note:** If the repository is private, use the Manual Setup method below instead.
+
 ```bash
+# For public repo:
 curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+
+# For private repo with GitHub token:
+curl -sSL -H "Authorization: token YOUR_TOKEN" https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 ```
 
-You'll be prompted to enter a **device ID** (e.g., `berlin-01`, `screen-lobby`). This ID is used for:
+**Device ID:** Defaults to `berlin1` if not provided. This ID is used for:
 - System hostname
 - Heartbeat reporting
 
-For automated installs:
+To override the default:
 ```bash
-curl ... | sudo DEVICE_ID=berlin-01 bash
+curl ... | sudo DEVICE_ID=berlin-02 bash
 ```
 
 That's it! The bootstrap script follows a 3-step process:
@@ -88,7 +94,7 @@ journalctl -u vlc-maintenance -f         # View maintenance logs
 ## Device Identification
 
 Each device has a unique ID stored in `/home/pi/vlc-player/.device`. This ID is:
-- Set during installation (prompted or via `DEVICE_ID` env var)
+- Set during installation (defaults to `berlin1` or via `DEVICE_ID` env var)
 - Used as the system hostname
 - Included in Healthchecks.io pings for device-level monitoring
 
