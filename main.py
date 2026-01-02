@@ -15,7 +15,6 @@ import zipfile
 from http.cookiejar import CookieJar
 from pathlib import Path
 from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedirectHandler, urlopen
-from urllib.parse import quote
 
 # ============================================================================
 # CONFIGURATION
@@ -137,7 +136,7 @@ def sync():
     
     # Heartbeat ping with device-specific check
     try:
-        ping_url = f"{get_healthcheck_url(device_id)}?rid={quote(device_id)}"
+        ping_url = get_healthcheck_url(device_id)
         urlopen(ping_url, timeout=10)
         print(f"Heartbeat sent ✓ ({device_id})")
     except Exception as e:
@@ -157,7 +156,15 @@ def play():
     if not playlist:
         sys.exit("No playlist found. Run: python main.py sync")
     print(f"Playing {playlist}")
-    subprocess.run([str(VLC), "--loop", str(playlist)])
+    subprocess.run([
+        str(VLC),
+        "--intf", "dummy",              # No GUI interface
+        "--fullscreen",                 # Fullscreen video
+        "--no-mouse-events",            # Ignore mouse
+        "--no-keyboard-events",         # Ignore keyboard
+        "--loop",                       # Loop playlist
+        str(playlist)
+    ])
 
 
 def update():
