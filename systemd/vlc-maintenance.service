@@ -5,7 +5,7 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-User=pi
-ExecStart=/usr/bin/python3 /home/pi/vlc-player/main.py sync
-ExecStart=/usr/bin/python3 /home/pi/vlc-player/main.py update
+User=__USER__
+ExecStart=/usr/bin/python3 __DIR__/main.py sync
+ExecStart=/usr/bin/python3 __DIR__/main.py update
 

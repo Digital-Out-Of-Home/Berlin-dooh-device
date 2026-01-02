@@ -23,6 +23,8 @@ DIR="$HOME_DIR/vlc-player"
 
 echo "=== VLC Player Bootstrap ==="
 echo "Detected user: $ACTUAL_USER"
+echo "Home directory: $HOME_DIR"
+echo "Install directory: $DIR"
 
 # ============================================================================
 # STEP 1: DOWNLOAD ALL FILES (Code, VLC, Media)
@@ -88,9 +90,17 @@ fi
 # ============================================================================
 
 echo "[2/3] Installing systemd services..."
-# Update systemd service files with actual user and directory
-sed -i "s|User=pi|User=$ACTUAL_USER|g" "$DIR/systemd/"*.service
-sed -i "s|/home/pi/vlc-player|$DIR|g" "$DIR/systemd/"*.service
+# Update systemd service files with actual user and directory using placeholders
+for service_file in "$DIR/systemd/"*.service; do
+    if [ -f "$service_file" ]; then
+        sed -i "s|__USER__|$ACTUAL_USER|g" "$service_file"
+        sed -i "s|__DIR__|$DIR|g" "$service_file"
+        # Verify replacement worked
+        if grep -q "__USER__\|__DIR__" "$service_file"; then
+            echo "Warning: Failed to replace placeholders in $service_file"
+        fi
+    fi
+done
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable vlc-maintenance.timer vlc-player

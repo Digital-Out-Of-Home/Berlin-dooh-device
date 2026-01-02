@@ -3,9 +3,9 @@ Description=VLC Player
 After=vlc-maintenance.service
 
 [Service]
-User=pi
+User=__USER__
 Environment=DISPLAY=:0
-ExecStart=/usr/bin/python3 /home/pi/vlc-player/main.py play
+ExecStart=/usr/bin/python3 __DIR__/main.py play
 Restart=always
 RestartSec=5
 
