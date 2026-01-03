@@ -1,7 +1,7 @@
 #!/bin/bash
 # Bootstrap VLC Player for Raspberry Pi
 # Run: sudo /home/user/vlc-player/bootstrap.sh
-# Or: GITHUB_TOKEN="ghp_xxx" sudo /home/user/vlc-player/bootstrap.sh
+# Note: GITHUB_TOKEN should be set in config.env file
 set -e
 
 # Prevent multiple runs

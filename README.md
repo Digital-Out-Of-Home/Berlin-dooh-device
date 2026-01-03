@@ -4,35 +4,34 @@ Syncs media from Dropbox and plays on loop using VLC. Designed for Raspberry Pi 
 
 ## Quick Install (Raspberry Pi)
 
-**Note:** If the repository is private, use the Manual Setup method below instead.
+**Setup:**
+1. Edit `config.env` with your settings:
+   - `DEVICE_ID=berlin1` (change per device)
+   - `GITHUB_TOKEN=ghp_your_token` (shared token for private repo)
+   - `DROPBOX_URL=your_dropbox_url`
+   - `HEALTHCHECK_URL=your_healthcheck_url`
 
-```bash
-# For public repo:
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+2. Copy entire `vlc-player` folder to SD card at `/home/user/vlc-player/`
 
-# For private repo with GitHub token:
-curl -sSL -H "Authorization: token YOUR_TOKEN" https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
-```
+3. On Raspberry Pi, run:
+   ```bash
+   sudo /home/user/vlc-player/bootstrap.sh
+   ```
 
-**Device ID:** Defaults to `berlin1` if not provided. This ID is used for:
-- System hostname
-- Heartbeat reporting
+That's it! The bootstrap script follows a 4-step process:
 
-To override the default:
-```bash
-curl ... | sudo DEVICE_ID=berlin-02 bash
-```
-
-That's it! The bootstrap script follows a 3-step process:
+**Step 0: Setup Configuration**
+- Copies `config.env` to `/etc/vlc-player/config`
+- Loads all configuration values
 
 **Step 1: Download All Files**
 - Set the system hostname to your device ID
 - Install VLC if needed
-- Download code files from GitHub
+- Use pre-installed files (if present) or download from GitHub
 - Sync media from Dropbox (immediate, not waiting for timer)
 - Check for code updates from GitHub
 
-**Step 2: Setup Cron Jobs and Watchdogs**
+**Step 2: Setup Services**
 - Install systemd services
 - Install watchdog cron (auto-restart if crashed)
 
@@ -43,30 +42,34 @@ That's it! The bootstrap script follows a 3-step process:
 
 The player starts playing immediately after all files are downloaded and synced!
 
-## Manual Setup
+## Configuration
 
-### 1. Clone the repo
+All configuration is in `config.env` file:
+
 ```bash
-git clone https://github.com/azikatti/Berlin-dooh-device.git /home/pi/vlc-player
-cd /home/pi/vlc-player
+# Device-specific
+DEVICE_ID=berlin1
+
+# GitHub (shared across all devices)
+GITHUB_TOKEN=ghp_your_shared_token_here
+
+# Dropbox (shared)
+DROPBOX_URL=https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1
+
+# Healthcheck (can be per-device or shared)
+HEALTHCHECK_URL=https://hc-ping.com/YOUR-UUID-HERE
 ```
 
-### 2. Configure your Dropbox folder
-Edit `main.py` and update the `DROPBOX_URL` with your shared folder link:
-```python
-DROPBOX_URL = "https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1"
-```
-
-### 3. Install
-Use the bootstrap script (see Quick Install above) or manually copy files and set up systemd services.
+**To change device ID:**
+Edit `config.env` before copying to SD card, or edit `/etc/vlc-player/config` on the device and restart services.
 
 ## Usage
 
 ### Commands
 ```bash
-python3 main.py sync    # Download media from Dropbox
-python3 main.py play    # Play playlist with VLC
-python3 main.py update  # Check for code updates and install if available
+python3 /home/user/vlc-player/main.py sync    # Download media from Dropbox
+python3 /home/user/vlc-player/main.py play    # Play playlist with VLC
+python3 /home/user/vlc-player/main.py update  # Check for code updates and install if available
 ```
 
 ### Service Management
@@ -81,9 +84,10 @@ journalctl -u vlc-maintenance -f         # View maintenance logs
 ## How It Works
 
 ### Bootstrap Process (First Install)
-1. **Downloads**: Installs VLC, downloads code from GitHub, syncs media from Dropbox
-2. **Setup**: Installs systemd services and watchdog cron
-3. **Start**: Launches VLC player with playlist (only after everything is ready)
+1. **Config**: Copies `config.env` to `/etc/vlc-player/config`
+2. **Downloads**: Installs VLC, uses pre-installed files or downloads from GitHub, syncs media from Dropbox
+3. **Setup**: Installs systemd services and watchdog cron
+4. **Start**: Launches VLC player with playlist (only after everything is ready)
 
 ### Runtime Operation
 1. **Maintenance (every 5 min)**: Syncs media from Dropbox AND checks for code updates
@@ -93,20 +97,23 @@ journalctl -u vlc-maintenance -f         # View maintenance logs
 
 ## Device Identification
 
-Each device has a unique ID stored in `/home/pi/vlc-player/.device`. This ID is:
-- Set during installation (defaults to `berlin1` or via `DEVICE_ID` env var)
+Device ID is stored in `config.env` (or `/etc/vlc-player/config` on device). This ID is:
+- Set in `config.env` before copying to SD card
 - Used as the system hostname
 - Included in Healthchecks.io pings for device-level monitoring
 
 To check device ID:
 ```bash
-cat /home/pi/vlc-player/.device
+grep DEVICE_ID /etc/vlc-player/config
+hostname
 ```
 
 To change device ID:
 ```bash
-echo "DEVICE_ID=new-name" | sudo tee /home/pi/vlc-player/.device
+sudo nano /etc/vlc-player/config
+# Change DEVICE_ID=berlin1 to DEVICE_ID=new-name
 sudo hostnamectl set-hostname new-name
+sudo systemctl restart vlc-player
 ```
 
 ## Reliability Features
@@ -115,9 +122,9 @@ sudo hostnamectl set-hostname new-name
 If Dropbox download fails (network issues), the sync retries up to 3 times with 30-minute delays between attempts.
 
 ### Heartbeat Monitoring
-After each successful sync, a ping is sent to [Healthchecks.io](https://healthchecks.io) with the device ID. Configure your own URL in `main.py`:
-```python
-HEALTHCHECK_URL = "https://hc-ping.com/YOUR-UUID-HERE"
+After each successful sync, a ping is sent to [Healthchecks.io](https://healthchecks.io) with the device ID. Configure your URL in `config.env`:
+```bash
+HEALTHCHECK_URL=https://hc-ping.com/YOUR-UUID-HERE
 ```
 You'll be alerted if a device stops syncing. The device ID appears in the ping for easy identification.
 
@@ -138,12 +145,12 @@ The player automatically checks GitHub every 5 minutes for code updates. If a ne
 
 **Check current version:**
 ```bash
-grep VERSION /home/pi/vlc-player/main.py
+grep VERSION /home/user/vlc-player/main.py
 ```
 
 **Manual update:**
 ```bash
-python3 /home/pi/vlc-player/main.py update
+python3 /home/user/vlc-player/main.py update
 ```
 
 ```
@@ -167,13 +174,15 @@ Dropbox Folder          Raspberry Pi
    ```
 3. Share the folder and get the link
 4. Add `?dl=1` to the end of the link for direct download
+5. Add the URL to `config.env` as `DROPBOX_URL`
 
 ## File Structure
 
 ```
-/home/pi/vlc-player/
+/home/user/vlc-player/
 ├── main.py              # Core script (sync, play, update)
-├── .device              # Device ID config
+├── bootstrap.sh          # Bootstrap installer
+├── config.env            # Configuration file (all settings)
 ├── media/               # Downloaded media (auto-synced)
 │   ├── playlist.m3u
 │   ├── playlist_local.m3u
@@ -184,27 +193,30 @@ Dropbox Folder          Raspberry Pi
     └── vlc-player.service       # VLC player
 ```
 
+Configuration is stored at `/etc/vlc-player/config` (copied from `config.env` during bootstrap).
+
 ## Requirements
 
 - Raspberry Pi (any model with display)
 - Raspberry Pi OS
 - VLC (`sudo apt install vlc`)
-- Internet connection (for Dropbox sync)
+- Internet connection (for Dropbox sync and GitHub updates)
 
 ## Troubleshooting
 
 **No video playing?**
 ```bash
 journalctl -u vlc-player -n 50   # Check logs
-python3 /home/pi/vlc-player/main.py sync  # Manual sync
-ls /home/pi/vlc-player/media/    # Check downloaded files
+python3 /home/user/vlc-player/main.py sync  # Manual sync
+ls /home/user/vlc-player/media/    # Check downloaded files
 ```
 
 **Sync not working?**
 ```bash
 systemctl status vlc-maintenance.timer  # Check timer
 journalctl -u vlc-maintenance -f         # View maintenance logs
-curl -I "YOUR_DROPBOX_URL"               # Test URL
+# Check config file
+cat /etc/vlc-player/config
 ```
 
 **Display issues?**
@@ -212,8 +224,14 @@ Make sure `DISPLAY=:0` is set. The player runs on the primary display.
 
 **Check device ID?**
 ```bash
-cat /home/pi/vlc-player/.device
+grep DEVICE_ID /etc/vlc-player/config
 hostname
+```
+
+**Authentication errors?**
+Make sure `GITHUB_TOKEN` is set correctly in `/etc/vlc-player/config`:
+```bash
+cat /etc/vlc-player/config | grep GITHUB_TOKEN
 ```
 
 ## License
