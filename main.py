@@ -4,6 +4,7 @@
 # ============================================================================
 # IMPORTS
 # ============================================================================
+import os
 import re
 import shutil
 import socket
@@ -17,12 +18,46 @@ from pathlib import Path
 from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedirectHandler, urlopen
 
 # ============================================================================
-# CONFIGURATION
+# CONFIGURATION - Load from config file
 # ============================================================================
-DROPBOX_URL = "https://www.dropbox.com/scl/fo/c98dl5jsxp3ae90yx9ww4/AD3YT1lVanI36T3pUaN_crU?rlkey=fzm1pc1qyhl4urkfo7kk3ftss&st=846rj2qj&dl=1"
-HEALTHCHECK_URL = "https://hc-ping.com/da226e90-5bfd-4ada-9f12-71959e346ff1"
-VERSION = "1.0.0"  # Update this when releasing
-REPO = "https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main"
+
+def load_config():
+    """Load configuration from /etc/vlc-player/config or environment."""
+    config_file = Path("/etc/vlc-player/config")
+    
+    if config_file.exists():
+        # Read config file
+        for line in config_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, value = line.split("=", 1)
+                os.environ[key.strip()] = value.strip()
+    
+    # Get values from environment (set by config file or systemd)
+    return {
+        "GITHUB_TOKEN": os.environ.get("GITHUB_TOKEN", ""),
+        "DROPBOX_URL": os.environ.get("DROPBOX_URL", ""),
+        "HEALTHCHECK_URL": os.environ.get("HEALTHCHECK_URL", ""),
+        "DEVICE_ID": os.environ.get("DEVICE_ID", ""),
+    }
+
+config = load_config()
+
+# Use config values
+DROPBOX_URL = config["DROPBOX_URL"]
+HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
+VERSION = "1.0.0"  # Code version (not config)
+
+# GitHub repo setup
+GITHUB_TOKEN = config["GITHUB_TOKEN"]
+REPO_OWNER = "azikatti"
+REPO_NAME = "Berlin-dooh-device"
+REPO_BRANCH = "main"
+
+if GITHUB_TOKEN:
+    REPO = f"https://{GITHUB_TOKEN}@raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
+else:
+    REPO = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
 
 BASE_DIR = Path(__file__).parent
 MEDIA_DIR = BASE_DIR / "media"
@@ -47,11 +82,13 @@ HEALTHCHECK_MAP = {
 
 def get_device_id():
     """Get device ID from config file or fall back to hostname."""
-    config_file = BASE_DIR / ".device"
-    if config_file.exists():
-        for line in config_file.read_text().splitlines():
-            if line.startswith("DEVICE_ID="):
-                return line.split("=", 1)[1].strip()
+    # Get from config (loaded via EnvironmentFile in systemd)
+    device_id = os.environ.get("DEVICE_ID", "")
+    
+    if device_id:
+        return device_id
+    
+    # Fallback to hostname
     return socket.gethostname()
 
 
@@ -212,6 +249,8 @@ def update():
             github_version = github_version.group(1) if github_version else "unknown"
         except Exception as e:
             print(f"Failed to fetch GitHub version: {e}")
+            if "401" in str(e) or "403" in str(e):
+                print("Authentication failed. Is GITHUB_TOKEN set in config?")
             return
         
         print(f"GitHub version: {github_version}")
@@ -245,6 +284,8 @@ def update():
                 print(f"  Downloaded {remote_path}")
             except Exception as e:
                 print(f"  Failed to download {remote_path}: {e}")
+                if "401" in str(e) or "403" in str(e):
+                    print("    Authentication failed. Check GITHUB_TOKEN in config.")
         
         # Set permissions
         (BASE_DIR / "main.py").chmod(0o755)
