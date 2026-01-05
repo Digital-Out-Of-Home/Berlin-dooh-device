@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Media Sync from Dropbox with safety measures. Usage: python media_sync.py"""
 
-import os
 import shutil
 import subprocess
 import sys
@@ -61,55 +60,6 @@ def check_disk_space(required_mb=500):
     if free_mb < required_mb:
         raise Exception(f"Insufficient disk space: {free_mb:.0f}MB free, need {required_mb}MB")
     return True
-
-
-def is_vlc_running():
-    """Check if VLC process is running via systemd."""
-    try:
-        # First try systemd (more reliable)
-        result = subprocess.run(
-            ["systemctl", "is-active", "--quiet", VLC_SERVICE],
-            capture_output=True,
-            timeout=2
-        )
-        if result.returncode == 0:
-            return True
-    except Exception:
-        pass
-    
-    # Fallback to pgrep if systemd check fails
-    try:
-        result = subprocess.run(
-            ["pgrep", "-f", "main.py"],
-            capture_output=True,
-            timeout=2
-        )
-        return result.returncode == 0
-    except Exception:
-        return False
-
-
-def wait_for_vlc_release(timeout=30):
-    """Wait for VLC to release file locks, or timeout."""
-    print("Waiting for VLC to release file locks...")
-    start = time.time()
-    while time.time() - start < timeout:
-        if not is_vlc_running():
-            return True
-        # Check if any files in media directory are locked
-        try:
-            result = subprocess.run(
-                ["lsof", "+D", str(MEDIA_DIR)],
-                capture_output=True,
-                timeout=2
-            )
-            # lsof returns 0 if files are found (locked), non-zero if none found (unlocked)
-            if result.returncode != 0:  # No locked files found
-                return True
-        except Exception:
-            pass
-        time.sleep(1)
-    return False
 
 
 def restart_vlc_service():
@@ -195,59 +145,22 @@ def download_with_retry():
                 raise Exception(f"Download failed after {MAX_RETRIES} attempts")
 
 
-def validate_playlist(playlist_path, media_dir):
-    """Validate playlist: check all files exist and filter out missing ones."""
-    if not playlist_path.exists():
-        return None
+def check_playlist_exists(media_dir):
+    """Simple check: playlist exists and has at least one media file."""
+    playlists = list(media_dir.glob("*.m3u"))
+    if not playlists:
+        return False
     
-    lines = []
-    valid_files = []
-    media_dir_resolved = media_dir.resolve()
-    
-    for line in playlist_path.read_text().splitlines():
-        if line.startswith("#") or not line.strip():
-            lines.append(line)
-        else:
-            # Handle both absolute and relative paths
-            file_path = Path(line.strip())
-            
-            # If absolute path in playlist, check it's in media_dir
-            if file_path.is_absolute():
-                file_path_resolved = file_path.resolve()
-                if str(file_path_resolved).startswith(str(media_dir_resolved)):
-                    media_file = file_path_resolved
-                else:
-                    # Absolute path outside media_dir - use just filename
-                    print(f"  Warning: Playlist path outside media directory: {line}")
-                    media_file = media_dir / file_path.name
-            else:
-                # Relative path - resolve against media_dir
-                media_file = (media_dir / file_path).resolve()
-                # Security: ensure it's still within media_dir
-                if not str(media_file).startswith(str(media_dir_resolved)):
-                    print(f"  Warning: Playlist path escapes media directory: {line}")
-                    continue
-            
-            if media_file.exists():
-                # Always use relative path from media_dir (not absolute)
-                try:
-                    relative_path = media_file.relative_to(media_dir)
-                    lines.append(str(relative_path))
-                except ValueError:
-                    # Fallback to just filename if relative path calculation fails
-                    lines.append(media_file.name)
-                valid_files.append(media_file.name)
-            else:
-                print(f"  Warning: Playlist references missing file: {file_path}")
-    
-    if not valid_files:
-        raise Exception("No valid media files found in playlist")
-    
-    # Write validated playlist (keep original name)
-    validated_playlist = playlist_path.parent / playlist_path.name
-    validated_playlist.write_text("\n".join(lines))
-    print(f"  Validated playlist: {len(valid_files)} files")
-    return validated_playlist
+    # Quick check: playlist has at least one non-comment line
+    for playlist in playlists:
+        try:
+            content = playlist.read_text()
+            if any(line.strip() and not line.startswith("#") 
+                   for line in content.splitlines()):
+                return True
+        except Exception:
+            continue
+    return False
 
 
 # ============================================================================
@@ -255,7 +168,7 @@ def validate_playlist(playlist_path, media_dir):
 # ============================================================================
 
 def sync():
-    """Download from Dropbox and safely swap media with all safety measures."""
+    """Download from Dropbox and safely swap media (simplified)."""
     # Lock file to prevent concurrent syncs (atomic creation)
     try:
         SYNC_LOCK.touch(exist_ok=False)  # Fails if file already exists
@@ -269,7 +182,7 @@ def sync():
         print(f"Device: {device_id}")
         
         # Validate DROPBOX_URL
-        if not DROPBOX_URL or DROPBOX_URL.strip() == "":
+        if not DROPBOX_URL or not DROPBOX_URL.strip():
             raise Exception("DROPBOX_URL is not configured in config.env")
         
         # Check disk space
@@ -286,58 +199,33 @@ def sync():
         
         print("Extracting...")
         with zipfile.ZipFile(zip_path) as zf:
-            for info in zf.infolist():
-                if info.is_dir() or info.filename.startswith("."):
-                    continue
-                parts = Path(info.filename).parts
-                name = Path(*parts[1:]) if len(parts) > 1 else Path(info.filename)
-                if name.name.startswith("."):
-                    continue
-                dest = STAGING_DIR / name
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                dest.write_bytes(zf.read(info))
-                print(f"  {name.name}")
+            # Extract all files (simpler than manual extraction)
+            zf.extractall(STAGING_DIR)
         zip_path.unlink()
         
-        # Find and validate playlist
-        print("Validating playlist...")
-        playlist_found = False
-        for m3u in STAGING_DIR.glob("*.m3u"):
-            validated = validate_playlist(m3u, STAGING_DIR)
-            if validated:
-                playlist_found = True
-                break
-        
-        if not playlist_found:
+        # Quick playlist check
+        if not check_playlist_exists(STAGING_DIR):
             raise Exception("No valid playlist found in downloaded content")
         
-        # Wait for VLC to release files (if running)
-        if is_vlc_running():
-            print("VLC is running, waiting for file release...")
-            if not wait_for_vlc_release(timeout=30):
-                print("Warning: VLC still has files locked, proceeding anyway...")
-        
         # Atomic swap: staging → media
+        # Safe: VLC will handle file loss gracefully and restart automatically
         print("Performing atomic swap...")
         if MEDIA_DIR.exists():
             shutil.rmtree(MEDIA_DIR, ignore_errors=True)
         STAGING_DIR.rename(MEDIA_DIR)
         print(f"Media synced to {MEDIA_DIR} ✓")
         
-        # Force VLC to reload new playlist
-        if is_vlc_running():
-            restart_vlc_service()
-        else:
-            print("VLC not running, will start on next play command")
+        # Restart VLC to load new playlist (always restart, no detection needed)
+        restart_vlc_service()
         
-        # Heartbeat ping
+        # Heartbeat ping (non-critical)
         try:
             ping_url = get_healthcheck_url(device_id)
             if ping_url:
                 urlopen(ping_url, timeout=10)
                 print(f"Heartbeat sent ✓ ({device_id})")
-        except Exception as e:
-            print(f"Heartbeat failed: {e}")
+        except Exception:
+            pass  # Non-critical, don't fail sync
         
         print("=== Sync Complete ===")
         

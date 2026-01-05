@@ -14,7 +14,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.6.5"  # Fixed: Playlist now uses relative paths instead of absolute staging paths
+VERSION = "1.7.0"  # Simplified: Removed VLC detection and complex playlist validation
 
 
 # ============================================================================
