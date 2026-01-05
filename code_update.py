@@ -195,18 +195,24 @@ def update(force=False):
             print("  Services may still have placeholders - run bootstrap.sh to fix")
             # Don't fail the entire update, but warn the user
         
-        # Restart services
-        print("Restarting services...")
+        # Restart maintenance timer to pick up new code
+        # Note: vlc-player doesn't need restart - it's not running Python code
+        # New code will be used on next maintenance run
+        print("Restarting maintenance timer...")
         result = subprocess.run(
-            ["sudo", "systemctl", "restart", "vlc-player", "vlc-maintenance.timer"],
+            ["sudo", "systemctl", "restart", "vlc-maintenance.timer"],
             capture_output=True,
             text=True,
             timeout=10,
             check=False
         )
         if result.returncode != 0:
-            print(f"  Warning: Service restart failed: {result.stderr.strip() if result.stderr else 'Unknown error'}")
-            print("  Services may need manual restart")
+            print(f"  Warning: Timer restart failed: {result.stderr.strip() if result.stderr else 'Unknown error'}")
+            print("  Timer may need manual restart")
+        else:
+            print("  Maintenance timer restarted ✓")
+            print("  Note: VLC player not restarted (to avoid interrupting playback)")
+            print("  New code will be used on next maintenance run")
         
         print("Code update complete!")
         
