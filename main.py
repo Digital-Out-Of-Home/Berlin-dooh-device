@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""VLC Playlist Manager. Usage: python main.py [sync|play|update]"""
+"""VLC Playlist Manager. Usage: python main.py [sync|play]"""
 
 # ============================================================================
 # IMPORTS
@@ -46,7 +46,7 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.2"  # Code version (not config)
+VERSION = "1.0.3"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
@@ -116,16 +116,6 @@ def download_with_retry():
                 time.sleep(wait)
             else:
                 raise Exception(f"Download failed after {MAX_RETRIES} attempts")
-
-
-def get_version_from_file(file_path):
-    """Extract VERSION constant from Python file."""
-    try:
-        content = file_path.read_text()
-        match = re.search(r'VERSION\s*=\s*"([^"]+)"', content)
-        return match.group(1) if match else "unknown"
-    except Exception:
-        return "unknown"
 
 
 # ============================================================================
@@ -210,107 +200,6 @@ def play():
     subprocess.run(vlc_args)
 
 
-def update():
-    """Check GitHub for code updates and install if new version available."""
-    lock_file = Path("/tmp/vlc-update.lock")
-    
-    # Prevent concurrent updates
-    if lock_file.exists():
-        print("Update already in progress, skipping...")
-        return
-    
-    try:
-        lock_file.touch()
-        
-        print("=== Checking for updates ===")
-        
-        # Get current version
-        current_version = get_version_from_file(BASE_DIR / "main.py")
-        print(f"Current version: {current_version}")
-        
-        # Get GitHub version
-        try:
-            opener = build_opener(HTTPCookieProcessor(CookieJar()), HTTPRedirectHandler())
-            req = Request(f"{REPO}/main.py", headers={"User-Agent": "Mozilla/5.0"})
-            github_content = opener.open(req, timeout=30).read().decode('utf-8')
-            github_version = re.search(r'VERSION\s*=\s*"([^"]+)"', github_content)
-            github_version = github_version.group(1) if github_version else "unknown"
-        except Exception as e:
-            print(f"Failed to fetch GitHub version: {e}")
-            if "401" in str(e) or "403" in str(e):
-                print("Authentication failed. Is GITHUB_TOKEN set in config?")
-            return
-        
-        print(f"GitHub version: {github_version}")
-        
-        # Compare versions
-        if current_version == github_version:
-            print(f"Already up to date (v{current_version})")
-            return
-        
-        print(f"Update available: {current_version} -> {github_version}")
-        print("=== Updating VLC Player ===")
-        
-        # Create directory
-        systemd_dir = BASE_DIR / "systemd"
-        systemd_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Download latest files - ALL code files
-        print("Downloading latest code...")
-        files_to_download = [
-            ("main.py", BASE_DIR / "main.py"),
-            ("bootstrap.sh", BASE_DIR / "bootstrap.sh"),
-            ("config.env", BASE_DIR / "config.env"),
-            ("systemd/vlc-maintenance.service", systemd_dir / "vlc-maintenance.service"),
-            ("systemd/vlc-maintenance.timer", systemd_dir / "vlc-maintenance.timer"),
-            ("systemd/vlc-player.service", systemd_dir / "vlc-player.service"),
-        ]
-        
-        for remote_path, local_path in files_to_download:
-            try:
-                req = Request(f"{REPO}/{remote_path}", headers={"User-Agent": "Mozilla/5.0"})
-                content = opener.open(req, timeout=30).read()
-                local_path.write_bytes(content)
-                print(f"  Downloaded {remote_path}")
-            except Exception as e:
-                print(f"  Failed to download {remote_path}: {e}")
-                if "401" in str(e) or "403" in str(e):
-                    print("    Authentication failed. Check GITHUB_TOKEN in config.")
-        
-        # Set permissions for executable files
-        (BASE_DIR / "main.py").chmod(0o755)
-        (BASE_DIR / "bootstrap.sh").chmod(0o755)
-        
-        # Update system config file if config.env was downloaded
-        print("Updating system config...")
-        if (BASE_DIR / "config.env").exists():
-            shutil.copy(BASE_DIR / "config.env", "/etc/vlc-player/config")
-            os.chmod("/etc/vlc-player/config", 0o600)
-            print("  Config file updated ✓")
-        
-        # Update systemd services
-        print("Updating systemd services...")
-        for file in systemd_dir.glob("*.service"):
-            subprocess.run(["sudo", "cp", str(file), "/etc/systemd/system/"], check=False)
-        for file in systemd_dir.glob("*.timer"):
-            subprocess.run(["sudo", "cp", str(file), "/etc/systemd/system/"], check=False)
-        subprocess.run(["sudo", "systemctl", "daemon-reload"], check=False)
-        
-        # Restart services
-        print("Restarting services...")
-        subprocess.run(["sudo", "systemctl", "restart", "vlc-player", "vlc-maintenance.timer"], check=False)
-        
-        # Save version to file for tracking
-        version_file = BASE_DIR / ".version"
-        version_file.write_text(github_version)
-        print(f"Version saved: {github_version}")
-        
-        print("Update complete!")
-        
-    finally:
-        lock_file.unlink(missing_ok=True)
-
-
 # ============================================================================
 # ENTRY POINT
 # ============================================================================
@@ -320,7 +209,6 @@ if __name__ == "__main__":
     commands = {
         "sync": sync,
         "play": play,
-        "update": update,
     }
-    func = commands.get(cmd, lambda: print("Usage: python main.py [sync|play|update]"))
+    func = commands.get(cmd, lambda: print("Usage: python main.py [sync|play]"))
     func()

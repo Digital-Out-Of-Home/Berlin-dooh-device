@@ -8,5 +8,5 @@ Type=oneshot
 User=__USER__
 EnvironmentFile=/etc/vlc-player/config
 ExecStart=/usr/bin/python3 __DIR__/main.py sync
-ExecStart=/usr/bin/python3 __DIR__/main.py update
+ExecStart=/usr/bin/python3 __DIR__/code_update.py
 

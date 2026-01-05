@@ -67,9 +67,9 @@ Edit `config.env` before copying to SD card, or edit `/etc/vlc-player/config` on
 
 ### Commands
 ```bash
-python3 /home/user/vlc-player/main.py sync    # Download media from Dropbox
-python3 /home/user/vlc-player/main.py play    # Play playlist with VLC
-python3 /home/user/vlc-player/main.py update  # Check for code updates and install if available
+python3 /home/user/vlc-player/main.py sync         # Download media from Dropbox
+python3 /home/user/vlc-player/main.py play          # Play playlist with VLC
+python3 /home/user/vlc-player/code_update.py        # Check for code updates and install if available
 ```
 
 ### Service Management
@@ -92,7 +92,7 @@ journalctl -u vlc-maintenance -f         # View maintenance logs
 ### Runtime Operation
 1. **Maintenance (every 5 min)**: Syncs media from Dropbox AND checks for code updates
    - Downloads Dropbox folder → extracts to temp → atomic swap to `media/`
-   - Checks GitHub for new version → downloads and installs if available
+   - Checks GitHub for new code version → downloads and installs if available
 2. **Play**: VLC runs in loop mode, auto-restarts if it crashes
 
 ## Device Identification
@@ -148,9 +148,9 @@ The player automatically checks GitHub every 5 minutes for code updates. If a ne
 grep VERSION /home/user/vlc-player/main.py
 ```
 
-**Manual update:**
+**Manual code update:**
 ```bash
-python3 /home/user/vlc-player/main.py update
+python3 /home/user/vlc-player/code_update.py
 ```
 
 ```
@@ -180,7 +180,8 @@ Dropbox Folder          Raspberry Pi
 
 ```
 /home/user/vlc-player/
-├── main.py              # Core script (sync, play, update)
+├── main.py              # Core script (sync, play)
+├── code_update.py       # Code update script (checks GitHub)
 ├── bootstrap.sh          # Bootstrap installer
 ├── config.env            # Configuration file (all settings)
 ├── media/               # Downloaded media (auto-synced)
@@ -188,7 +189,7 @@ Dropbox Folder          Raspberry Pi
 │   ├── playlist_local.m3u
 │   └── *.mp4
 └── systemd/             # Service files
-    ├── vlc-maintenance.service  # Sync + update
+    ├── vlc-maintenance.service  # Sync + code update
     ├── vlc-maintenance.timer    # Every 5 min
     └── vlc-player.service       # VLC player
 ```

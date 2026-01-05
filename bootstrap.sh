@@ -111,7 +111,7 @@ fi
 
 # Check for code updates
 echo "[1/3] Checking for code updates..."
-if sudo -u "$USER" python3 "$DIR/main.py" update; then
+if sudo -u "$USER" python3 "$DIR/code_update.py"; then
     echo "Code updated (if needed) ✓"
 else
     echo "Update check completed ✓"
