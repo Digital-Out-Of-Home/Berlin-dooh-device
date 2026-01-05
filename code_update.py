@@ -69,8 +69,12 @@ def compare_versions(v1, v2):
 # UPDATE FUNCTION
 # ============================================================================
 
-def update():
-    """Check GitHub for code updates and install if new version available."""
+def update(force=False):
+    """Check GitHub for code updates and install if new version available.
+    
+    Args:
+        force: If True, skip version check and force update
+    """
     lock_file = Path("/tmp/vlc-update.lock")
     
     # Prevent concurrent updates (atomic creation)
@@ -109,13 +113,17 @@ def update():
         
         print(f"GitHub version: {github_version}")
         
-        # Compare versions (semantic versioning)
-        version_diff = compare_versions(current_version, github_version)
-        if version_diff >= 0:
-            print(f"Already up to date (v{current_version})")
-            return
+        # Compare versions (semantic versioning) - skip if force
+        if not force:
+            version_diff = compare_versions(current_version, github_version)
+            if version_diff >= 0:
+                print(f"Already up to date (v{current_version})")
+                return
+            
+            print(f"Update available: {current_version} -> {github_version}")
+        else:
+            print(f"Force update requested (current: v{current_version}, GitHub: v{github_version})")
         
-        print(f"Update available: {current_version} -> {github_version}")
         print("=== Updating VLC Player Code ===")
         
         # Create directory
@@ -229,5 +237,7 @@ def update():
 # ============================================================================
 
 if __name__ == "__main__":
-    update()
+    import sys
+    force = "--force" in sys.argv or "-f" in sys.argv
+    update(force=force)
 
