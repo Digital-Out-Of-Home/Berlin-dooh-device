@@ -3,7 +3,7 @@
 # Checks if all bootstrap operations completed successfully
 # Usage: sudo ./verify_bootstrap.sh
 
-set -e
+# Remove set -e - we want to continue even if checks fail
 
 # Colors for output
 RED='\033[0;31m'
@@ -32,14 +32,17 @@ echo "User: $USER"
 echo "Install directory: $DIR"
 echo ""
 
-# Function to check and report
+# Function to check and report (takes result code as first arg)
 check() {
-    if [ $? -eq 0 ]; then
-        echo -e "${GREEN}✓${NC} $1"
+    local result=$1
+    shift
+    local message="$@"
+    if [ $result -eq 0 ]; then
+        echo -e "${GREEN}✓${NC} $message"
         ((PASSED++))
         return 0
     else
-        echo -e "${RED}✗${NC} $1"
+        echo -e "${RED}✗${NC} $message"
         ((FAILED++))
         return 1
     fi
@@ -59,14 +62,14 @@ echo "=== 1. System Configuration ==="
 # Check hostname
 DEVICE_ID=$(hostname)
 if [ -n "$DEVICE_ID" ] && [ "$DEVICE_ID" != "raspberrypi" ]; then
-    check "Hostname set to: $DEVICE_ID"
+    check 0 "Hostname set to: $DEVICE_ID"
 else
     warn "Hostname not set or still default"
 fi
 
 # Check /etc/hosts
 if grep -q "127.0.0.1.*$DEVICE_ID\|$DEVICE_ID.*127.0.0.1" /etc/hosts 2>/dev/null; then
-    check "Hostname in /etc/hosts"
+    check 0 "Hostname in /etc/hosts"
 else
     warn "Hostname not in /etc/hosts"
 fi
@@ -74,7 +77,7 @@ fi
 # Check VLC installation
 if command -v vlc &> /dev/null; then
     VLC_VERSION=$(vlc --version 2>/dev/null | head -1 || echo "installed")
-    check "VLC installed ($VLC_VERSION)"
+    check 0 "VLC installed ($VLC_VERSION)"
 else
     warn "VLC not installed"
 fi
@@ -88,7 +91,11 @@ echo ""
 echo "=== 2. File Structure ==="
 
 # Check directory exists
-[ -d "$DIR" ] && check "Install directory exists: $DIR" || warn "Install directory missing: $DIR"
+if [ -d "$DIR" ]; then
+    check 0 "Install directory exists: $DIR"
+else
+    warn "Install directory missing: $DIR"
+fi
 
 # Required code files
 REQUIRED_FILES=(
@@ -98,17 +105,18 @@ REQUIRED_FILES=(
     "code_update.py"
     "bootstrap.sh"
     "stop_vlc.sh"
+    "verify_bootstrap.sh"
     "config.env"
 )
 
 for file in "${REQUIRED_FILES[@]}"; do
     if [ -f "$DIR/$file" ]; then
-        check "File exists: $file"
+        check 0 "File exists: $file"
         
         # Check if executable (for Python/Shell scripts)
         if [[ "$file" == *.py ]] || [[ "$file" == *.sh ]]; then
             if [ -x "$DIR/$file" ]; then
-                check "  → Executable permission set"
+                check 0 "  → Executable permission set"
             else
                 warn "  → Missing executable permission"
             fi
@@ -120,12 +128,12 @@ done
 
 # Check systemd directory
 if [ -d "$DIR/systemd" ]; then
-    check "Systemd directory exists"
+    check 0 "Systemd directory exists"
     
     # Check systemd files
     for file in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer"; do
         if [ -f "$DIR/systemd/$file" ]; then
-            check "Systemd file exists: $file"
+            check 0 "Systemd file exists: $file"
         else
             warn "Systemd file missing: $file"
         fi
@@ -138,7 +146,7 @@ fi
 if [ -d "$DIR" ]; then
     OWNER=$(stat -c '%U' "$DIR" 2>/dev/null || stat -f '%Su' "$DIR" 2>/dev/null)
     if [ "$OWNER" = "$USER" ]; then
-        check "Directory owned by $USER"
+        check 0 "Directory owned by $USER"
     else
         warn "Directory owned by $OWNER (expected $USER)"
     fi
@@ -153,14 +161,28 @@ echo ""
 echo "=== 3. Configuration ==="
 
 if [ -f "$CONFIG_FILE" ]; then
-    check "Config file exists: $CONFIG_FILE"
+    check 0 "Config file exists: $CONFIG_FILE"
     
     # Check for required config values
     source "$CONFIG_FILE" 2>/dev/null || true
     
-    [ -n "$DROPBOX_URL" ] && check "  → DROPBOX_URL configured" || warn "  → DROPBOX_URL missing"
-    [ -n "$DEVICE_ID" ] && check "  → DEVICE_ID configured ($DEVICE_ID)" || warn "  → DEVICE_ID missing"
-    [ -n "$GITHUB_REPO_OWNER" ] && check "  → GITHUB_REPO_OWNER configured" || warn "  → GITHUB_REPO_OWNER missing"
+    if [ -n "$DROPBOX_URL" ]; then
+        check 0 "  → DROPBOX_URL configured"
+    else
+        warn "  → DROPBOX_URL missing"
+    fi
+    
+    if [ -n "$DEVICE_ID" ]; then
+        check 0 "  → DEVICE_ID configured ($DEVICE_ID)"
+    else
+        warn "  → DEVICE_ID missing"
+    fi
+    
+    if [ -n "$GITHUB_REPO_OWNER" ]; then
+        check 0 "  → GITHUB_REPO_OWNER configured"
+    else
+        warn "  → GITHUB_REPO_OWNER missing"
+    fi
 else
     warn "Config file missing: $CONFIG_FILE"
 fi
@@ -174,15 +196,15 @@ echo ""
 echo "=== 4. Media ==="
 
 if [ -d "$DIR/media" ]; then
-    check "Media directory exists"
+    check 0 "Media directory exists"
     
     if [ -f "$DIR/media/playlist.m3u" ]; then
-        check "Playlist exists: playlist.m3u"
+        check 0 "Playlist exists: playlist.m3u"
         
         # Count media files
         MEDIA_COUNT=$(find "$DIR/media" -type f \( -name "*.mp4" -o -name "*.avi" -o -name "*.mkv" \) 2>/dev/null | wc -l)
         if [ "$MEDIA_COUNT" -gt 0 ]; then
-            check "Media files found: $MEDIA_COUNT"
+            check 0 "Media files found: $MEDIA_COUNT"
         else
             warn "No media files found in media directory"
         fi
@@ -204,18 +226,18 @@ echo "=== 5. Systemd Services ==="
 # Check if services exist in /etc/systemd/system/
 for service in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer"; do
     if [ -f "/etc/systemd/system/$service" ]; then
-        check "Service file installed: $service"
+        check 0 "Service file installed: $service"
         
         # Check if placeholders are replaced
         if grep -q "__USER__\|__DIR__" "/etc/systemd/system/$service" 2>/dev/null; then
             warn "  → Placeholders not replaced in $service"
         else
-            check "  → Placeholders replaced"
+            check 0 "  → Placeholders replaced"
         fi
         
         # Check if enabled
         if systemctl is-enabled "$service" &>/dev/null; then
-            check "  → Service enabled"
+            check 0 "  → Service enabled"
         else
             warn "  → Service not enabled"
         fi
@@ -226,13 +248,13 @@ done
 
 # Check service status
 if systemctl is-active --quiet vlc-player 2>/dev/null; then
-    check "vlc-player service is running"
+    check 0 "vlc-player service is running"
 else
     warn "vlc-player service not running"
 fi
 
 if systemctl is-active --quiet vlc-maintenance.timer 2>/dev/null; then
-    check "vlc-maintenance.timer is active"
+    check 0 "vlc-maintenance.timer is active"
 else
     warn "vlc-maintenance.timer not active"
 fi
@@ -246,7 +268,7 @@ echo ""
 echo "=== 6. Watchdog Cron ==="
 
 if crontab -u "$USER" -l 2>/dev/null | grep -q "vlc-player"; then
-    check "Watchdog cron installed"
+    check 0 "Watchdog cron installed"
 else
     warn "Watchdog cron not found"
 fi

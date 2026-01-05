@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.8.2"  # Added: Bootstrap verification script to check all operations
+VERSION = "1.8.3"  # Fixed: Bootstrap verification script to run all checks without exiting early
 
 
 # ============================================================================
