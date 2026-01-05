@@ -14,7 +14,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.6.1"  # Fixed: VLC subprocess output capture preventing video display
+VERSION = "1.6.2"  # Added: stop_vlc.sh script for stopping VLC services
 
 
 # ============================================================================
