@@ -21,7 +21,6 @@ config = load_config()
 
 MEDIA_DIR = BASE_DIR / "media"
 STAGING_DIR = BASE_DIR / ".media_staging"
-BACKUP_DIR = BASE_DIR / ".media_backup"
 SYNC_LOCK = Path("/tmp/vlc-sync.lock")
 VLC_SERVICE = "vlc-player"
 
@@ -245,49 +244,12 @@ def validate_playlist(playlist_path, media_dir):
     return validated_playlist
 
 
-def create_backup():
-    """Create backup of current media directory."""
-    if MEDIA_DIR.exists() and any(MEDIA_DIR.iterdir()):
-        if BACKUP_DIR.exists():
-            shutil.rmtree(BACKUP_DIR, ignore_errors=True)
-        shutil.copytree(MEDIA_DIR, BACKUP_DIR, ignore_errors=True)
-        print("Backup created ✓")
-        return True
-    return False
-
-
-def restore_backup():
-    """Restore media from backup if sync failed."""
-    if not BACKUP_DIR.exists():
-        raise Exception("Backup directory does not exist")
-    
-    if not any(BACKUP_DIR.iterdir()):
-        raise Exception("Backup directory is empty")
-    
-    print("Restoring from backup...")
-    try:
-        if MEDIA_DIR.exists():
-            shutil.rmtree(MEDIA_DIR, ignore_errors=True)
-        shutil.copytree(BACKUP_DIR, MEDIA_DIR, ignore_errors=True)
-        
-        # Verify restore succeeded
-        if not MEDIA_DIR.exists() or not any(MEDIA_DIR.iterdir()):
-            raise Exception("Backup restore failed: media directory empty after restore")
-        
-        print("Backup restored ✓")
-        return True
-    except Exception as e:
-        raise Exception(f"Failed to restore backup: {e}")
-
-
 # ============================================================================
 # MAIN SYNC FUNCTION
 # ============================================================================
 
 def sync():
     """Download from Dropbox and safely swap media with all safety measures."""
-    backup_created = False  # Initialize early to ensure it's always defined
-    
     # Lock file to prevent concurrent syncs (atomic creation)
     try:
         SYNC_LOCK.touch(exist_ok=False)  # Fails if file already exists
@@ -296,7 +258,6 @@ def sync():
         return
     
     try:
-        
         device_id = get_device_id()
         print(f"=== Media Sync ===")
         print(f"Device: {device_id}")
@@ -308,10 +269,6 @@ def sync():
         # Check disk space
         print("Checking disk space...")
         check_disk_space(required_mb=500)
-        
-        # Create backup of current media
-        print("Creating backup...")
-        backup_created = create_backup()
         
         # Clean staging directory
         if STAGING_DIR.exists():
@@ -380,14 +337,7 @@ def sync():
         
     except Exception as e:
         print(f"=== Sync Failed: {e} ===")
-        # Restore backup if sync failed
-        if backup_created:
-            print("Attempting to restore backup...")
-            try:
-                restore_backup()
-            except Exception as restore_error:
-                print(f"  Backup restore also failed: {restore_error}")
-                print("  Device will be without media until next successful sync")
+        print("Device will be without media until next successful sync")
         sys.exit(1)
     
     finally:
