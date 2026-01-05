@@ -51,7 +51,7 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.6"  # Code version (not config)
+VERSION = "1.0.7"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
@@ -105,9 +105,17 @@ def get_healthcheck_url(device_id):
 
 def download_with_retry():
     """Download from Dropbox with retry logic."""
+    if not DROPBOX_URL or not DROPBOX_URL.strip():
+        raise Exception("DROPBOX_URL is not configured in /etc/vlc-player/config")
+    
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            print(f"Downloading... (attempt {attempt}/{MAX_RETRIES})")
+            print(f"Downloading from Dropbox... (attempt {attempt}/{MAX_RETRIES})")
+            if len(DROPBOX_URL) > 80:
+                print(f"URL: {DROPBOX_URL[:80]}...")
+            else:
+                print(f"URL: {DROPBOX_URL}")
+            
             opener = build_opener(HTTPCookieProcessor(CookieJar()), HTTPRedirectHandler())
             req = Request(DROPBOX_URL, headers={"User-Agent": "Mozilla/5.0"})
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
@@ -115,6 +123,10 @@ def download_with_retry():
                 return Path(f.name)
         except Exception as e:
             print(f"  Failed: {e}")
+            if "unknown url type" in str(e).lower() or "unknown url" in str(e).lower():
+                print("  Error: Invalid DROPBOX_URL format. Check config file.")
+                print(f"  Current URL: {DROPBOX_URL}")
+                print("  URL should start with http:// or https://")
             if attempt < MAX_RETRIES:
                 wait = RETRY_DELAY * attempt
                 print(f"  Retrying in {wait // 60} minutes...")
@@ -131,6 +143,12 @@ def sync():
     """Download from Dropbox and atomic swap."""
     device_id = get_device_id()
     print(f"Device: {device_id}")
+    
+    # Validate DROPBOX_URL is set
+    if not DROPBOX_URL or DROPBOX_URL.strip() == "":
+        print("Error: DROPBOX_URL not configured in /etc/vlc-player/config")
+        print("Please set DROPBOX_URL in the config file")
+        sys.exit(1)
     
     shutil.rmtree(TEMP_DIR, ignore_errors=True)
     TEMP_DIR.mkdir(parents=True)
