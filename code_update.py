@@ -27,15 +27,18 @@ def load_config():
     
     return {
         "GITHUB_TOKEN": os.environ.get("GITHUB_TOKEN", ""),
+        "GITHUB_REPO_OWNER": os.environ.get("GITHUB_REPO_OWNER", "azikatti"),
+        "GITHUB_REPO_NAME": os.environ.get("GITHUB_REPO_NAME", "Berlin-dooh-device"),
+        "GITHUB_REPO_BRANCH": os.environ.get("GITHUB_REPO_BRANCH", "main"),
     }
 
 config = load_config()
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
-REPO_OWNER = "azikatti"
-REPO_NAME = "Berlin-dooh-device"
-REPO_BRANCH = "main"
+REPO_OWNER = config["GITHUB_REPO_OWNER"]
+REPO_NAME = config["GITHUB_REPO_NAME"]
+REPO_BRANCH = config["GITHUB_REPO_BRANCH"]
 
 if GITHUB_TOKEN:
     REPO = f"https://{GITHUB_TOKEN}@raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"

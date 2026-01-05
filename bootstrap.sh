@@ -85,7 +85,12 @@ else
         exit 1
     fi
     
-    REPO_AUTH="https://${GITHUB_TOKEN}@raw.githubusercontent.com/azikatti/Berlin-dooh-device/main"
+    # Get repo info from config or use defaults
+    GITHUB_REPO_OWNER="${GITHUB_REPO_OWNER:-azikatti}"
+    GITHUB_REPO_NAME="${GITHUB_REPO_NAME:-Berlin-dooh-device}"
+    GITHUB_REPO_BRANCH="${GITHUB_REPO_BRANCH:-main}"
+    
+    REPO_AUTH="https://${GITHUB_TOKEN}@raw.githubusercontent.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/${GITHUB_REPO_BRANCH}"
     
     curl -sSL "$REPO_AUTH/main.py" -o "$DIR/main.py"
     curl -sSL "$REPO_AUTH/systemd/vlc-maintenance.service" -o "$DIR/systemd/vlc-maintenance.service"

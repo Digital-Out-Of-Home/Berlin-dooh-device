@@ -36,9 +36,14 @@ def load_config():
     # Get values from environment (set by config file or systemd)
     return {
         "GITHUB_TOKEN": os.environ.get("GITHUB_TOKEN", ""),
+        "GITHUB_REPO_OWNER": os.environ.get("GITHUB_REPO_OWNER", "azikatti"),
+        "GITHUB_REPO_NAME": os.environ.get("GITHUB_REPO_NAME", "Berlin-dooh-device"),
+        "GITHUB_REPO_BRANCH": os.environ.get("GITHUB_REPO_BRANCH", "main"),
         "DROPBOX_URL": os.environ.get("DROPBOX_URL", ""),
         "HEALTHCHECK_URL": os.environ.get("HEALTHCHECK_URL", ""),
         "DEVICE_ID": os.environ.get("DEVICE_ID", ""),
+        "MAX_RETRIES": os.environ.get("MAX_RETRIES", "3"),
+        "RETRY_DELAY": os.environ.get("RETRY_DELAY", "1800"),
     }
 
 config = load_config()
@@ -46,13 +51,13 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.5"  # Code version (not config)
+VERSION = "1.0.6"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
-REPO_OWNER = "azikatti"
-REPO_NAME = "Berlin-dooh-device"
-REPO_BRANCH = "main"
+REPO_OWNER = config["GITHUB_REPO_OWNER"]
+REPO_NAME = config["GITHUB_REPO_NAME"]
+REPO_BRANCH = config["GITHUB_REPO_BRANCH"]
 
 if GITHUB_TOKEN:
     REPO = f"https://{GITHUB_TOKEN}@raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
@@ -64,8 +69,8 @@ MEDIA_DIR = BASE_DIR / "media"
 TEMP_DIR = BASE_DIR / ".media_temp"
 VLC = Path("/usr/bin/vlc")
 
-MAX_RETRIES = 3
-RETRY_DELAY = 1800  # 30 minutes
+MAX_RETRIES = int(config["MAX_RETRIES"])
+RETRY_DELAY = int(config["RETRY_DELAY"])  # seconds
 
 # Device to Healthchecks.io mapping
 HEALTHCHECK_MAP = {
