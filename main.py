@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.8.7"  # Improved: Code updates no longer restart VLC (avoids interrupting playback)
+VERSION = "1.8.8"  # VLC playlist reload via HTTP (no service restart needed)
 
 
 # ============================================================================
@@ -36,6 +36,9 @@ def play():
     vlc_args = [
         str(VLC),
         "--intf", "dummy",              # Use dummy interface (no GUI)
+        "--extraintf", "http",          # Enable HTTP interface for remote control
+        "--http-port", "8080",         # HTTP interface port
+        "--http-password", "vlc",       # Simple password for security
         "--fullscreen",                 # Fullscreen video
         "--no-mouse-events",            # Ignore mouse
         "--no-keyboard-events",         # Ignore keyboard

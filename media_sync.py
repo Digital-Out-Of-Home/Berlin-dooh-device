@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Media Sync from Dropbox with safety measures. Usage: python media_sync.py"""
 
+import base64
 import shutil
 import subprocess
 import sys
 import tempfile
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 import zipfile
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -51,31 +55,50 @@ def get_healthcheck_url(device_id):
     return f"https://hc-ping.com/{check_id}" if check_id else ""
 
 
-def restart_vlc_service():
-    """Force restart VLC service to load new playlist."""
-    print("Restarting VLC service to load new playlist...")
+def reload_vlc_playlist():
+    """Reload VLC playlist via HTTP interface without restarting."""
+    print("Reloading VLC playlist...")
     
-    # Stop service first
-    subprocess.run(["sudo", "systemctl", "stop", VLC_SERVICE], check=False)
-    time.sleep(1)
+    playlist_path = MEDIA_DIR / "playlist.m3u"
+    if not playlist_path.exists():
+        print("Warning: Playlist not found, cannot reload")
+        return
     
-    # Kill any remaining VLC processes (force)
-    subprocess.run(["sudo", "pkill", "-9", "vlc"], check=False)
-    subprocess.run(["sudo", "pkill", "-9", "-f", "main.py"], check=False)
-    time.sleep(1)
+    # VLC HTTP interface endpoint
+    base_url = "http://localhost:8080"
+    auth_string = base64.b64encode(b":vlc").decode('ascii')
     
-    # Start service
-    result = subprocess.run(
-        ["sudo", "systemctl", "start", VLC_SERVICE],
-        capture_output=True,
-        text=True,
-        timeout=10
-    )
-    
-    if result.returncode == 0:
-        print("VLC service restarted ✓")
-    else:
-        print(f"Warning: VLC start failed: {result.stderr}")
+    try:
+        # Step 1: Clear current playlist
+        clear_req = urllib.request.Request(
+            f"{base_url}/requests/status.xml?command=pl_empty",
+            headers={"Authorization": f"Basic {auth_string}"}
+        )
+        urllib.request.urlopen(clear_req, timeout=2)
+        
+        # Step 2: Add new playlist
+        playlist_url = f"file://{playlist_path.absolute()}"
+        add_req = urllib.request.Request(
+            f"{base_url}/requests/status.xml?command=in_enqueue&input={urllib.parse.quote(playlist_url)}",
+            headers={"Authorization": f"Basic {auth_string}"}
+        )
+        urllib.request.urlopen(add_req, timeout=2)
+        
+        # Step 3: Play the new playlist
+        play_req = urllib.request.Request(
+            f"{base_url}/requests/status.xml?command=pl_play",
+            headers={"Authorization": f"Basic {auth_string}"}
+        )
+        urllib.request.urlopen(play_req, timeout=2)
+        
+        print("VLC playlist reloaded ✓")
+    except urllib.error.URLError as e:
+        # VLC might not be running or HTTP interface not available
+        print(f"Warning: Could not reload playlist via HTTP (VLC may not be running): {e}")
+        print("VLC will pick up the new playlist on next loop cycle")
+    except Exception as e:
+        print(f"Warning: Playlist reload failed: {e}")
+        print("VLC will pick up the new playlist on next loop cycle")
 
 
 def download_with_retry():
@@ -190,8 +213,8 @@ def sync():
         # Small delay to ensure filesystem is ready
         time.sleep(1)
         
-        # Force restart VLC to load new playlist
-        restart_vlc_service()
+        # Reload VLC playlist without restarting
+        reload_vlc_playlist()
         
         # Heartbeat ping (non-critical)
         try:
