@@ -88,13 +88,14 @@ curl -sSL "$REPO_PUBLIC/media_sync.py" -o "$DIR/media_sync.py"
 curl -sSL "$REPO_PUBLIC/code_update.py" -o "$DIR/code_update.py"
 curl -sSL "$REPO_PUBLIC/bootstrap.sh" -o "$DIR/bootstrap.sh"
 curl -sSL "$REPO_PUBLIC/stop_vlc.sh" -o "$DIR/stop_vlc.sh"
+curl -sSL "$REPO_PUBLIC/verify_bootstrap.sh" -o "$DIR/verify_bootstrap.sh"
 curl -sSL "$REPO_PUBLIC/config.env" -o "$DIR/config.env"
 curl -sSL "$REPO_PUBLIC/systemd/vlc-maintenance.service" -o "$DIR/systemd/vlc-maintenance.service"
 curl -sSL "$REPO_PUBLIC/systemd/vlc-maintenance.timer" -o "$DIR/systemd/vlc-maintenance.timer"
 curl -sSL "$REPO_PUBLIC/systemd/vlc-player.service" -o "$DIR/systemd/vlc-player.service"
 echo "Code files downloaded ✓"
 
-chmod +x "$DIR/main.py" "$DIR/config.py" "$DIR/media_sync.py" "$DIR/code_update.py" "$DIR/bootstrap.sh" "$DIR/stop_vlc.sh"
+chmod +x "$DIR/main.py" "$DIR/config.py" "$DIR/media_sync.py" "$DIR/code_update.py" "$DIR/bootstrap.sh" "$DIR/stop_vlc.sh" "$DIR/verify_bootstrap.sh"
 chown -R "$USER:$USER" "$DIR"
 
 # Re-source config file after download (needed for subsequent steps)
