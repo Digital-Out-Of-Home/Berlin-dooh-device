@@ -83,7 +83,7 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.10"  # Code version (not config)
+VERSION = "1.0.11"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
@@ -182,8 +182,31 @@ def sync():
         print("Please set DROPBOX_URL in the config file")
         sys.exit(1)
     
-    shutil.rmtree(TEMP_DIR, ignore_errors=True)
-    TEMP_DIR.mkdir(parents=True)
+    # Remove temp directory with retry logic
+    max_cleanup_attempts = 3
+    for attempt in range(max_cleanup_attempts):
+        if TEMP_DIR.exists():
+            try:
+                shutil.rmtree(TEMP_DIR)
+                break  # Successfully removed
+            except Exception as e:
+                if attempt < max_cleanup_attempts - 1:
+                    print(f"Warning: Could not remove temp directory (attempt {attempt + 1}), retrying...")
+                    time.sleep(1)
+                else:
+                    print(f"Warning: Could not fully remove temp directory: {e}")
+                    # Last resort: try to remove contents individually
+                    try:
+                        for item in TEMP_DIR.iterdir():
+                            if item.is_dir():
+                                shutil.rmtree(item, ignore_errors=True)
+                            else:
+                                item.unlink(missing_ok=True)
+                    except Exception:
+                        pass
+    
+    # Create temp directory (exist_ok=True handles case where directory still exists)
+    TEMP_DIR.mkdir(parents=True, exist_ok=True)
     
     zip_path = download_with_retry()
     
