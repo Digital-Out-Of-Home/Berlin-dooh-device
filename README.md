@@ -12,18 +12,12 @@ On a fresh Raspberry Pi, run this single command:
 curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 ```
 
-**Before running**, you need to set `GITHUB_TOKEN` as an environment variable (the bootstrap script will download `config.env` from GitHub, but needs the token to access the repo):
-
-```bash
-export GITHUB_TOKEN=ghp_your_token_here
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
-```
-
-Or create `~/vlc-player/config.env` first with your settings:
+The bootstrap script will download `config.env` from GitHub. You can edit it after installation, or create `~/vlc-player/config.env` first with your settings:
 - `DEVICE_ID=berlin1` (change per device)
-- `GITHUB_TOKEN=ghp_your_token` (GitHub token for repo access)
 - `DROPBOX_URL=your_dropbox_url`
 - `HEALTHCHECK_URL=your_healthcheck_url`
+
+**Note:** Public repo - no GITHUB_TOKEN required!
 
 ### Manual Installation
 
@@ -35,15 +29,12 @@ If you prefer to download and run manually:
    chmod +x /tmp/bootstrap.sh
    ```
 
-2. Set GITHUB_TOKEN (if not in config.env):
-   ```bash
-   export GITHUB_TOKEN=ghp_your_token_here
-   ```
-
-3. Run the bootstrap:
+2. Run the bootstrap:
    ```bash
    sudo /tmp/bootstrap.sh
    ```
+
+**Note:** Public repo - no GITHUB_TOKEN required!
 
 **Note:** The username is auto-detected (works with 'admin', 'user', or any username)
 
@@ -79,8 +70,8 @@ All configuration is in `config.env` file:
 # Device-specific
 DEVICE_ID=berlin1
 
-# GitHub (shared across all devices)
-GITHUB_TOKEN=ghp_your_shared_token_here
+# GitHub (public repo - GITHUB_TOKEN not required)
+# GITHUB_TOKEN=ghp_your_token  # Only needed for private repos
 
 # Dropbox (shared)
 DROPBOX_URL=https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1

@@ -1,7 +1,7 @@
 #!/bin/bash
 # Bootstrap VLC Player for Raspberry Pi
 # Run: sudo ~/vlc-player/bootstrap.sh
-# Note: Username is auto-detected. GITHUB_TOKEN should be set in config.env file
+# Note: Username is auto-detected. Public repo - no GITHUB_TOKEN required
 set -e
 
 # Prevent multiple runs
@@ -36,16 +36,15 @@ echo "Install directory: $DIR"
 
 echo "[0/3] Setting up configuration..."
 # Config file may exist locally or will be downloaded from GitHub
-# We need GITHUB_TOKEN to download - check if it's in environment or config file
+# Public repo - no GITHUB_TOKEN required
 if [ -f "$CONFIG_FILE" ]; then
-    # Source existing config to get GITHUB_TOKEN
+    # Source existing config
     set -a
     source "$CONFIG_FILE"
     set +a
     echo "Config file loaded ✓"
 else
     echo "Config file not found - will download from GitHub"
-    echo "GITHUB_TOKEN must be set as environment variable if config.env doesn't exist"
 fi
 
 # Get DEVICE_ID from config (will be available after config is downloaded/loaded)
@@ -71,32 +70,24 @@ mkdir -p "$DIR/systemd"
 # Always download all files from GitHub (no pre-installation assumption)
 echo "[1/3] Downloading code files from GitHub..."
 
-# GITHUB_TOKEN must be available (from config file or environment)
-if [ -z "$GITHUB_TOKEN" ]; then
-    echo "Error: GITHUB_TOKEN not found in config.env or environment"
-    echo "Either:"
-    echo "  1. Create $CONFIG_FILE with GITHUB_TOKEN=... before running bootstrap"
-    echo "  2. Export GITHUB_TOKEN as environment variable: export GITHUB_TOKEN=..."
-    exit 1
-fi
-
 # Get repo info from config or use defaults
 GITHUB_REPO_OWNER="${GITHUB_REPO_OWNER:-azikatti}"
 GITHUB_REPO_NAME="${GITHUB_REPO_NAME:-Berlin-dooh-device}"
 GITHUB_REPO_BRANCH="${GITHUB_REPO_BRANCH:-main}"
 
-REPO_AUTH="https://${GITHUB_TOKEN}@raw.githubusercontent.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/${GITHUB_REPO_BRANCH}"
+# Use public repo URL (no authentication required)
+REPO_PUBLIC="https://raw.githubusercontent.com/${GITHUB_REPO_OWNER}/${GITHUB_REPO_NAME}/${GITHUB_REPO_BRANCH}"
 
 # Download all code files (always from GitHub, no pre-installation assumption)
-curl -sSL "$REPO_AUTH/main.py" -o "$DIR/main.py"
-curl -sSL "$REPO_AUTH/config.py" -o "$DIR/config.py"
-curl -sSL "$REPO_AUTH/media_sync.py" -o "$DIR/media_sync.py"
-curl -sSL "$REPO_AUTH/code_update.py" -o "$DIR/code_update.py"
-curl -sSL "$REPO_AUTH/bootstrap.sh" -o "$DIR/bootstrap.sh"
-curl -sSL "$REPO_AUTH/config.env" -o "$DIR/config.env"
-curl -sSL "$REPO_AUTH/systemd/vlc-maintenance.service" -o "$DIR/systemd/vlc-maintenance.service"
-curl -sSL "$REPO_AUTH/systemd/vlc-maintenance.timer" -o "$DIR/systemd/vlc-maintenance.timer"
-curl -sSL "$REPO_AUTH/systemd/vlc-player.service" -o "$DIR/systemd/vlc-player.service"
+curl -sSL "$REPO_PUBLIC/main.py" -o "$DIR/main.py"
+curl -sSL "$REPO_PUBLIC/config.py" -o "$DIR/config.py"
+curl -sSL "$REPO_PUBLIC/media_sync.py" -o "$DIR/media_sync.py"
+curl -sSL "$REPO_PUBLIC/code_update.py" -o "$DIR/code_update.py"
+curl -sSL "$REPO_PUBLIC/bootstrap.sh" -o "$DIR/bootstrap.sh"
+curl -sSL "$REPO_PUBLIC/config.env" -o "$DIR/config.env"
+curl -sSL "$REPO_PUBLIC/systemd/vlc-maintenance.service" -o "$DIR/systemd/vlc-maintenance.service"
+curl -sSL "$REPO_PUBLIC/systemd/vlc-maintenance.timer" -o "$DIR/systemd/vlc-maintenance.timer"
+curl -sSL "$REPO_PUBLIC/systemd/vlc-player.service" -o "$DIR/systemd/vlc-player.service"
 echo "Code files downloaded ✓"
 
 chmod +x "$DIR/main.py" "$DIR/config.py" "$DIR/media_sync.py" "$DIR/code_update.py" "$DIR/bootstrap.sh"

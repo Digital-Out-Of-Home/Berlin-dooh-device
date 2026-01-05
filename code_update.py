@@ -16,16 +16,13 @@ from config import BASE_DIR, load_config, create_http_opener
 
 config = load_config()
 
-# GitHub repo setup
-GITHUB_TOKEN = config["GITHUB_TOKEN"]
+# GitHub repo setup (public repo - no authentication required)
 REPO_OWNER = config["GITHUB_REPO_OWNER"]
 REPO_NAME = config["GITHUB_REPO_NAME"]
 REPO_BRANCH = config["GITHUB_REPO_BRANCH"]
 
-if GITHUB_TOKEN:
-    REPO = f"https://{GITHUB_TOKEN}@raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
-else:
-    REPO = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
+# Use public repo URL (no authentication required)
+REPO = f"https://raw.githubusercontent.com/{REPO_OWNER}/{REPO_NAME}/{REPO_BRANCH}"
 
 # ============================================================================
 # HELPER FUNCTIONS
@@ -108,8 +105,6 @@ def update():
             github_version = github_version.group(1) if github_version else "unknown"
         except Exception as e:
             print(f"Failed to fetch GitHub version: {e}")
-            if "401" in str(e) or "403" in str(e):
-                print("Authentication failed. Is GITHUB_TOKEN set in config?")
             return
         
         print(f"GitHub version: {github_version}")
@@ -185,8 +180,6 @@ def update():
                 print(f"  Downloaded {remote_path}")
             except Exception as e:
                 print(f"  Failed to download {remote_path}: {e}")
-                if "401" in str(e) or "403" in str(e):
-                    print("    Authentication failed. Check GITHUB_TOKEN in config.")
         
         # Set permissions for executable files
         (BASE_DIR / "main.py").chmod(0o755)
