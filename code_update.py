@@ -154,6 +154,10 @@ def update():
         # Update system config file if config.env was downloaded
         print("Updating system config...")
         if (BASE_DIR / "config.env").exists():
+            # Create directory if it doesn't exist
+            config_dir = Path("/etc/vlc-player")
+            config_dir.mkdir(parents=True, exist_ok=True)
+            
             shutil.copy(BASE_DIR / "config.env", "/etc/vlc-player/config")
             os.chmod("/etc/vlc-player/config", 0o600)
             print("  Config file updated ✓")
