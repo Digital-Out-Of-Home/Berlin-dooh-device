@@ -140,6 +140,7 @@ def update(force=False):
             ("bootstrap.sh", BASE_DIR / "bootstrap.sh"),
             ("stop_vlc.sh", BASE_DIR / "stop_vlc.sh"),
             ("verify_bootstrap.sh", BASE_DIR / "verify_bootstrap.sh"),
+            ("cleanup_bootstrap.sh", BASE_DIR / "cleanup_bootstrap.sh"),
             ("config.env", BASE_DIR / "config.env"),
             ("code_update.py", BASE_DIR / "code_update.py"),  # Include itself
             ("systemd/vlc-maintenance.service", systemd_dir / "vlc-maintenance.service"),
@@ -176,6 +177,7 @@ def update(force=False):
         (BASE_DIR / "bootstrap.sh").chmod(0o755)
         (BASE_DIR / "stop_vlc.sh").chmod(0o755)
         (BASE_DIR / "verify_bootstrap.sh").chmod(0o755)
+        (BASE_DIR / "cleanup_bootstrap.sh").chmod(0o755)
         (BASE_DIR / "code_update.py").chmod(0o755)
         
         # Config file is now local - no need to copy to /etc

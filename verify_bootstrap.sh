@@ -253,27 +253,6 @@ fi
 echo ""
 
 # ============================================================================
-# 6. CRON JOB
-# ============================================================================
-
-echo "=== 6. Watchdog Cron ==="
-
-CRON_OUTPUT=$(crontab -u "$USER" -l 2>/dev/null)
-if [ -n "$CRON_OUTPUT" ]; then
-    if echo "$CRON_OUTPUT" | grep -q "vlc-player"; then
-        check 0 "Watchdog cron installed"
-        # Show the cron entry for verification
-        echo "$CRON_OUTPUT" | grep "vlc-player" | sed 's/^/  → /'
-    else
-        warn "Watchdog cron not found in crontab"
-    fi
-else
-    warn "No crontab found for user $USER"
-fi
-
-echo ""
-
-# ============================================================================
 # SUMMARY
 # ============================================================================
 

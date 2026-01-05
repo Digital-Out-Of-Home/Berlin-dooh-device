@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.8.5"  # Removed: Hostname setup from bootstrap (not needed for VLC player)
+VERSION = "1.8.6"  # Removed: Watchdog cron (redundant with systemd Restart=always), added cleanup script
 
 
 # ============================================================================
