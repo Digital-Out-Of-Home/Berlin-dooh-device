@@ -24,10 +24,42 @@ from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedir
 def load_config():
     """Load configuration from /etc/vlc-player/config or environment."""
     config_file = Path("/etc/vlc-player/config")
+    content = ""
     
     if config_file.exists():
-        # Read config file
-        for line in config_file.read_text().splitlines():
+        try:
+            # Try to read config file directly
+            content = config_file.read_text()
+        except PermissionError:
+            # If permission denied, use sudo to read (only for reading, not execution)
+            try:
+                result = subprocess.run(
+                    ["sudo", "cat", str(config_file)],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    check=False
+                )
+                if result.returncode == 0:
+                    content = result.stdout
+                else:
+                    # Fall back to local config.env if available
+                    local_config = Path(__file__).parent / "config.env"
+                    if local_config.exists():
+                        print("Warning: Cannot read system config, using local config.env")
+                        content = local_config.read_text()
+            except Exception as e:
+                # Fall back to local config.env if available
+                local_config = Path(__file__).parent / "config.env"
+                if local_config.exists():
+                    print("Warning: Cannot read system config, using local config.env")
+                    content = local_config.read_text()
+        except Exception as e:
+            print(f"Warning: Could not read config file: {e}")
+    
+    # Parse config content
+    if content:
+        for line in content.splitlines():
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:
                 key, value = line.split("=", 1)
@@ -51,7 +83,7 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.8"  # Code version (not config)
+VERSION = "1.0.9"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]

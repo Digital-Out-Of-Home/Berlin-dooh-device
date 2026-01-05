@@ -13,8 +13,15 @@ fi
 touch "$LOCK_FILE"
 trap "rm -f $LOCK_FILE" EXIT
 
-# Fixed username
-USER="user"
+# Auto-detect username
+if [ -n "$SUDO_USER" ]; then
+    # Running with sudo, use the original user
+    USER="$SUDO_USER"
+elif [ "$USER" = "root" ] || [ -z "$USER" ]; then
+    # Running as root or USER not set, find first non-root user
+    USER=$(getent passwd | awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}')
+    [ -z "$USER" ] && USER="user"
+fi
 HOME_DIR="/home/$USER"
 DIR="$HOME_DIR/vlc-player"
 CONFIG_FILE="/etc/vlc-player/config"
