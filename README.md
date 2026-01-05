@@ -4,20 +4,48 @@ Syncs media from Dropbox and plays on loop using VLC. Designed for Raspberry Pi 
 
 ## Quick Install (Raspberry Pi)
 
-**Setup:**
-1. Edit `config.env` with your settings:
-   - `DEVICE_ID=berlin1` (change per device)
-   - `GITHUB_TOKEN=ghp_your_token` (shared token for private repo)
-   - `DROPBOX_URL=your_dropbox_url`
-   - `HEALTHCHECK_URL=your_healthcheck_url`
+### One-Line Installation
 
-2. Copy entire `vlc-player` folder to SD card at `~/vlc-player/` (or `/home/<username>/vlc-player/`)
+On a fresh Raspberry Pi, run this single command:
 
-3. On Raspberry Pi, run:
+```bash
+curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+```
+
+**Before running**, you need to set `GITHUB_TOKEN` as an environment variable (the bootstrap script will download `config.env` from GitHub, but needs the token to access the repo):
+
+```bash
+export GITHUB_TOKEN=ghp_your_token_here
+curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+```
+
+Or create `~/vlc-player/config.env` first with your settings:
+- `DEVICE_ID=berlin1` (change per device)
+- `GITHUB_TOKEN=ghp_your_token` (GitHub token for repo access)
+- `DROPBOX_URL=your_dropbox_url`
+- `HEALTHCHECK_URL=your_healthcheck_url`
+
+### Manual Installation
+
+If you prefer to download and run manually:
+
+1. Download the bootstrap script:
    ```bash
-   sudo ~/vlc-player/bootstrap.sh
+   curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh -o /tmp/bootstrap.sh
+   chmod +x /tmp/bootstrap.sh
    ```
-   Note: The username is auto-detected (works with 'admin', 'user', or any username)
+
+2. Set GITHUB_TOKEN (if not in config.env):
+   ```bash
+   export GITHUB_TOKEN=ghp_your_token_here
+   ```
+
+3. Run the bootstrap:
+   ```bash
+   sudo /tmp/bootstrap.sh
+   ```
+
+**Note:** The username is auto-detected (works with 'admin', 'user', or any username)
 
 That's it! The bootstrap script follows a 4-step process:
 
@@ -28,7 +56,7 @@ That's it! The bootstrap script follows a 4-step process:
 **Step 1: Download All Files**
 - Set the system hostname to your device ID
 - Install VLC if needed
-- Use pre-installed files (if present) or download from GitHub
+- Download all code files from GitHub (no pre-installation required)
 - Sync media from Dropbox (immediate, not waiting for timer)
 - Check for code updates from GitHub
 
