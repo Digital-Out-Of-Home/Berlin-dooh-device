@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.8.0"  # Further simplified: Removed disk checks, ZIP validation, DEBUG mode, file size limits
+VERSION = "1.8.1"  # Improved: Force VLC restart with process kill to ensure new playlist loads
 
 
 # ============================================================================

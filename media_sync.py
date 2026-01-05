@@ -52,8 +52,30 @@ def get_healthcheck_url(device_id):
 
 
 def restart_vlc_service():
-    """Restart VLC service to load new playlist."""
-    subprocess.run(["sudo", "systemctl", "restart", VLC_SERVICE], check=False)
+    """Force restart VLC service to load new playlist."""
+    print("Restarting VLC service to load new playlist...")
+    
+    # Stop service first
+    subprocess.run(["sudo", "systemctl", "stop", VLC_SERVICE], check=False)
+    time.sleep(1)
+    
+    # Kill any remaining VLC processes (force)
+    subprocess.run(["sudo", "pkill", "-9", "vlc"], check=False)
+    subprocess.run(["sudo", "pkill", "-9", "-f", "main.py"], check=False)
+    time.sleep(1)
+    
+    # Start service
+    result = subprocess.run(
+        ["sudo", "systemctl", "start", VLC_SERVICE],
+        capture_output=True,
+        text=True,
+        timeout=10
+    )
+    
+    if result.returncode == 0:
+        print("VLC service restarted ✓")
+    else:
+        print(f"Warning: VLC start failed: {result.stderr}")
 
 
 def download_with_retry():
@@ -165,7 +187,10 @@ def sync():
         STAGING_DIR.rename(MEDIA_DIR)
         print(f"Media synced to {MEDIA_DIR} ✓")
         
-        # Restart VLC to load new playlist (always restart, no detection needed)
+        # Small delay to ensure filesystem is ready
+        time.sleep(1)
+        
+        # Force restart VLC to load new playlist
         restart_vlc_service()
         
         # Heartbeat ping (non-critical)
