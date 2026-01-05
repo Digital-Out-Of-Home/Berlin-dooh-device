@@ -132,6 +132,7 @@ def update():
             ("config.py", BASE_DIR / "config.py", MAX_CODE_FILE_SIZE),
             ("media_sync.py", BASE_DIR / "media_sync.py", MAX_CODE_FILE_SIZE),
             ("bootstrap.sh", BASE_DIR / "bootstrap.sh", MAX_CODE_FILE_SIZE),
+            ("stop_vlc.sh", BASE_DIR / "stop_vlc.sh", MAX_CODE_FILE_SIZE),
             ("config.env", BASE_DIR / "config.env", MAX_CONFIG_FILE_SIZE),
             ("code_update.py", BASE_DIR / "code_update.py", MAX_CODE_FILE_SIZE),  # Include itself
             ("systemd/vlc-maintenance.service", systemd_dir / "vlc-maintenance.service", MAX_CODE_FILE_SIZE),
@@ -186,6 +187,7 @@ def update():
         (BASE_DIR / "config.py").chmod(0o755)
         (BASE_DIR / "media_sync.py").chmod(0o755)
         (BASE_DIR / "bootstrap.sh").chmod(0o755)
+        (BASE_DIR / "stop_vlc.sh").chmod(0o755)
         (BASE_DIR / "code_update.py").chmod(0o755)
         
         # Config file is now local - no need to copy to /etc
