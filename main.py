@@ -22,38 +22,14 @@ from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedir
 # ============================================================================
 
 def load_config():
-    """Load configuration from /etc/vlc-player/config or environment."""
-    config_file = Path("/etc/vlc-player/config")
+    """Load configuration from local config.env file."""
+    # Use local config.env in the same directory as the script
+    config_file = Path(__file__).parent / "config.env"
     content = ""
     
     if config_file.exists():
         try:
-            # Try to read config file directly
             content = config_file.read_text()
-        except PermissionError:
-            # If permission denied, use sudo to read (only for reading, not execution)
-            try:
-                result = subprocess.run(
-                    ["sudo", "cat", str(config_file)],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
-                if result.returncode == 0:
-                    content = result.stdout
-                else:
-                    # Fall back to local config.env if available
-                    local_config = Path(__file__).parent / "config.env"
-                    if local_config.exists():
-                        print("Warning: Cannot read system config, using local config.env")
-                        content = local_config.read_text()
-            except Exception as e:
-                # Fall back to local config.env if available
-                local_config = Path(__file__).parent / "config.env"
-                if local_config.exists():
-                    print("Warning: Cannot read system config, using local config.env")
-                    content = local_config.read_text()
         except Exception as e:
             print(f"Warning: Could not read config file: {e}")
     
@@ -65,7 +41,7 @@ def load_config():
                 key, value = line.split("=", 1)
                 os.environ[key.strip()] = value.strip()
     
-    # Get values from environment (set by config file or systemd)
+    # Get values from environment (set by config file)
     return {
         "GITHUB_TOKEN": os.environ.get("GITHUB_TOKEN", ""),
         "GITHUB_REPO_OWNER": os.environ.get("GITHUB_REPO_OWNER", "azikatti"),
@@ -83,7 +59,7 @@ config = load_config()
 # Use config values
 DROPBOX_URL = config["DROPBOX_URL"]
 HEALTHCHECK_URL = config["HEALTHCHECK_URL"]
-VERSION = "1.0.11"  # Code version (not config)
+VERSION = "1.1.0"  # Code version (not config)
 
 # GitHub repo setup
 GITHUB_TOKEN = config["GITHUB_TOKEN"]
@@ -138,7 +114,7 @@ def get_healthcheck_url(device_id):
 def download_with_retry():
     """Download from Dropbox with retry logic."""
     if not DROPBOX_URL or not DROPBOX_URL.strip():
-        raise Exception("DROPBOX_URL is not configured in /etc/vlc-player/config")
+        raise Exception("DROPBOX_URL is not configured in config.env")
     
     for attempt in range(1, MAX_RETRIES + 1):
         try:
@@ -178,8 +154,8 @@ def sync():
     
     # Validate DROPBOX_URL is set
     if not DROPBOX_URL or DROPBOX_URL.strip() == "":
-        print("Error: DROPBOX_URL not configured in /etc/vlc-player/config")
-        print("Please set DROPBOX_URL in the config file")
+        print("Error: DROPBOX_URL not configured in config.env")
+        print("Please set DROPBOX_URL in the config.env file")
         sys.exit(1)
     
     # Remove temp directory with retry logic

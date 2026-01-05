@@ -24,8 +24,7 @@ elif [ "$USER" = "root" ] || [ -z "$USER" ]; then
 fi
 HOME_DIR="/home/$USER"
 DIR="$HOME_DIR/vlc-player"
-CONFIG_FILE="/etc/vlc-player/config"
-REPO_CONFIG="$DIR/config.env"
+CONFIG_FILE="$DIR/config.env"
 
 echo "=== VLC Player Bootstrap ==="
 echo "User: $USER"
@@ -36,27 +35,14 @@ echo "Install directory: $DIR"
 # ============================================================================
 
 echo "[0/3] Setting up configuration..."
-if [ -f "$REPO_CONFIG" ]; then
-    # Config exists in repo, copy to system location
-    mkdir -p /etc/vlc-player
-    cp "$REPO_CONFIG" "$CONFIG_FILE"
-    chmod 600 "$CONFIG_FILE"
-    chown root:root "$CONFIG_FILE"
-    
+if [ -f "$CONFIG_FILE" ]; then
     # Source config to get values
     set -a
     source "$CONFIG_FILE"
     set +a
-    
-    echo "Config file installed ✓"
-elif [ -f "$CONFIG_FILE" ]; then
-    # System config exists, use it
-    set -a
-    source "$CONFIG_FILE"
-    set +a
-    echo "Using existing system config ✓"
+    echo "Config file loaded ✓"
 else
-    echo "Error: No config file found at $REPO_CONFIG or $CONFIG_FILE"
+    echo "Error: No config file found at $CONFIG_FILE"
     exit 1
 fi
 
@@ -177,4 +163,4 @@ echo "Maintenance timer started ✓"
 echo ""
 echo "=== Bootstrap Complete! ==="
 echo "Device: $DEVICE_ID"
-echo "Config: $CONFIG_FILE"
+echo "Config: $CONFIG_FILE (local)"

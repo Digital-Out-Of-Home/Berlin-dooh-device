@@ -15,38 +15,14 @@ from urllib.request import Request, build_opener, HTTPCookieProcessor, HTTPRedir
 # ============================================================================
 
 def load_config():
-    """Load configuration from /etc/vlc-player/config or environment."""
-    config_file = Path("/etc/vlc-player/config")
+    """Load configuration from local config.env file."""
+    # Use local config.env in the same directory as the script
+    config_file = Path(__file__).parent / "config.env"
     content = ""
     
     if config_file.exists():
         try:
-            # Try to read config file directly
             content = config_file.read_text()
-        except PermissionError:
-            # If permission denied, use sudo to read (only for reading, not execution)
-            try:
-                result = subprocess.run(
-                    ["sudo", "cat", str(config_file)],
-                    capture_output=True,
-                    text=True,
-                    timeout=5,
-                    check=False
-                )
-                if result.returncode == 0:
-                    content = result.stdout
-                else:
-                    # Fall back to local config.env if available
-                    local_config = Path(__file__).parent / "config.env"
-                    if local_config.exists():
-                        print("Warning: Cannot read system config, using local config.env")
-                        content = local_config.read_text()
-            except Exception as e:
-                # Fall back to local config.env if available
-                local_config = Path(__file__).parent / "config.env"
-                if local_config.exists():
-                    print("Warning: Cannot read system config, using local config.env")
-                    content = local_config.read_text()
         except Exception as e:
             print(f"Warning: Could not read config file: {e}")
     
@@ -187,17 +163,9 @@ def update():
         (BASE_DIR / "bootstrap.sh").chmod(0o755)
         (BASE_DIR / "code_update.py").chmod(0o755)
         
-        # Update system config file if config.env was downloaded
-        print("Updating system config...")
+        # Config file is now local - no need to copy to /etc
         if (BASE_DIR / "config.env").exists():
-            # Create directory if it doesn't exist (requires sudo)
-            subprocess.run(["sudo", "mkdir", "-p", "/etc/vlc-player"], check=False)
-            
-            # Copy config file (requires sudo)
-            subprocess.run(["sudo", "cp", str(BASE_DIR / "config.env"), "/etc/vlc-player/config"], check=False)
-            subprocess.run(["sudo", "chmod", "600", "/etc/vlc-player/config"], check=False)
-            subprocess.run(["sudo", "chown", "root:root", "/etc/vlc-player/config"], check=False)
-            print("  Config file updated ✓")
+            print("  Config file updated locally ✓")
         
         # Update systemd services
         print("Updating systemd services...")
