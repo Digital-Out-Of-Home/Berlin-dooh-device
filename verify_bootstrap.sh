@@ -59,21 +59,6 @@ warn() {
 
 echo "=== 1. System Configuration ==="
 
-# Check hostname
-DEVICE_ID=$(hostname)
-if [ -n "$DEVICE_ID" ] && [ "$DEVICE_ID" != "raspberrypi" ]; then
-    check 0 "Hostname set to: $DEVICE_ID"
-else
-    warn "Hostname not set or still default"
-fi
-
-# Check /etc/hosts
-if grep -q "127.0.0.1.*$DEVICE_ID\|$DEVICE_ID.*127.0.0.1" /etc/hosts 2>/dev/null; then
-    check 0 "Hostname in /etc/hosts"
-else
-    warn "Hostname not in /etc/hosts"
-fi
-
 # Check VLC installation
 if command -v vlc &> /dev/null; then
     VLC_VERSION=$(vlc --version 2>/dev/null | head -1 || echo "installed")
@@ -163,22 +148,24 @@ echo "=== 3. Configuration ==="
 if [ -f "$CONFIG_FILE" ]; then
     check 0 "Config file exists: $CONFIG_FILE"
     
-    # Check for required config values
-    source "$CONFIG_FILE" 2>/dev/null || true
+    # Parse config values reliably (handles URLs with special characters)
+    DROPBOX_URL=$(grep "^DROPBOX_URL=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    DEVICE_ID=$(grep "^DEVICE_ID=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    GITHUB_REPO_OWNER=$(grep "^GITHUB_REPO_OWNER=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     
-    if [ -n "$DROPBOX_URL" ]; then
+    if [ -n "$DROPBOX_URL" ] && [ "$DROPBOX_URL" != "" ]; then
         check 0 "  → DROPBOX_URL configured"
     else
         warn "  → DROPBOX_URL missing"
     fi
     
-    if [ -n "$DEVICE_ID" ]; then
+    if [ -n "$DEVICE_ID" ] && [ "$DEVICE_ID" != "" ]; then
         check 0 "  → DEVICE_ID configured ($DEVICE_ID)"
     else
         warn "  → DEVICE_ID missing"
     fi
     
-    if [ -n "$GITHUB_REPO_OWNER" ]; then
+    if [ -n "$GITHUB_REPO_OWNER" ] && [ "$GITHUB_REPO_OWNER" != "" ]; then
         check 0 "  → GITHUB_REPO_OWNER configured"
     else
         warn "  → GITHUB_REPO_OWNER missing"
@@ -249,12 +236,16 @@ done
 # Check service status
 if systemctl is-active --quiet vlc-player 2>/dev/null; then
     check 0 "vlc-player service is running"
+elif systemctl is-enabled --quiet vlc-player 2>/dev/null; then
+    warn "vlc-player service enabled but not running"
 else
     warn "vlc-player service not running"
 fi
 
 if systemctl is-active --quiet vlc-maintenance.timer 2>/dev/null; then
     check 0 "vlc-maintenance.timer is active"
+elif systemctl is-enabled --quiet vlc-maintenance.timer 2>/dev/null; then
+    warn "vlc-maintenance.timer enabled but not active"
 else
     warn "vlc-maintenance.timer not active"
 fi
@@ -267,10 +258,17 @@ echo ""
 
 echo "=== 6. Watchdog Cron ==="
 
-if crontab -u "$USER" -l 2>/dev/null | grep -q "vlc-player"; then
-    check 0 "Watchdog cron installed"
+CRON_OUTPUT=$(crontab -u "$USER" -l 2>/dev/null)
+if [ -n "$CRON_OUTPUT" ]; then
+    if echo "$CRON_OUTPUT" | grep -q "vlc-player"; then
+        check 0 "Watchdog cron installed"
+        # Show the cron entry for verification
+        echo "$CRON_OUTPUT" | grep "vlc-player" | sed 's/^/  → /'
+    else
+        warn "Watchdog cron not found in crontab"
+    fi
 else
-    warn "Watchdog cron not found"
+    warn "No crontab found for user $USER"
 fi
 
 echo ""

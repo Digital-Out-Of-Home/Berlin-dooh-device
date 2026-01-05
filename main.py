@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.8.3"  # Fixed: Bootstrap verification script to run all checks without exiting early
+VERSION = "1.8.4"  # Improved: Removed hostname check, fixed DROPBOX_URL parsing in verification script
 
 
 # ============================================================================
