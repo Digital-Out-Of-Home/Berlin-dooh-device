@@ -14,7 +14,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.5.1"  # Fixed: improved VLC error handling and diagnostics
+VERSION = "1.6.0"  # Removed: backup functionality, simplified sync process
 
 
 # ============================================================================
