@@ -69,7 +69,7 @@ Edit `config.env` before copying to SD card, or edit `/etc/vlc-player/config` on
 ### Commands
 ```bash
 python3 ~/vlc-player/media_sync.py         # Download media from Dropbox
-python3 ~/vlc-player/main.py play           # Play playlist with VLC
+python3 ~/vlc-player/main.py               # Play playlist with VLC
 python3 ~/vlc-player/code_update.py        # Check for code updates and install if available
 ```
 
@@ -132,7 +132,7 @@ You'll be alerted if a device stops syncing. The device ID appears in the ping f
 ### Watchdog Cron
 A cron job runs every 5 minutes to check if Python and VLC are running. If either dies or freezes, the service is automatically restarted:
 ```
-*/5 * * * * (pgrep -f "main.py play" && pgrep -x vlc) || systemctl restart vlc-player
+*/5 * * * * (pgrep -f "main.py" && pgrep -x vlc) || systemctl restart vlc-player
 ```
 
 ### Auto-Update Mechanism

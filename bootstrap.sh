@@ -138,7 +138,7 @@ echo "Systemd services installed ✓"
 
 # Install watchdog cron
 echo "[2/3] Installing watchdog cron..."
-WATCHDOG='*/5 * * * * (pgrep -f "main.py play" && pgrep -x vlc) || systemctl restart vlc-player'
+WATCHDOG='*/5 * * * * (pgrep -f "main.py" && pgrep -x vlc) || systemctl restart vlc-player'
 (crontab -u "$USER" -l 2>/dev/null | grep -v "vlc-player"; echo "$WATCHDOG") | crontab -u "$USER" -
 echo "Watchdog installed ✓"
 

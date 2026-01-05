@@ -81,7 +81,7 @@ def is_vlc_running():
     # Fallback to pgrep if systemd check fails
     try:
         result = subprocess.run(
-            ["pgrep", "-f", "main.py play"],
+            ["pgrep", "-f", "main.py"],
             capture_output=True,
             timeout=2
         )
