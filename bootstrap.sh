@@ -59,6 +59,15 @@ fi
 
 # --- Install systemd services -------------------------------------------------
 echo "[3/3] Installing systemd services..."
+
+# Replace placeholders in service files before copying
+for service_file in "$DIR/systemd/"*.service "$DIR/systemd/"*.timer; do
+  if [ -f "$service_file" ]; then
+    sed -i "s|__USER__|$USER|g" "$service_file"
+    sed -i "s|__DIR__|$DIR|g" "$service_file"
+  fi
+done
+
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 systemctl enable vlc-player vlc-maintenance.timer
