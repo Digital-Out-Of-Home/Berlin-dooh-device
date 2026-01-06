@@ -29,7 +29,7 @@ DROPBOX_URL = config["DROPBOX_URL"]
 # ============================================================================
 
 def download_with_retry():
-    """Download from Dropbox with single retry."""
+    """Download from Dropbox with single retry (with progress)."""
     if not DROPBOX_URL or not DROPBOX_URL.strip():
         raise Exception("DROPBOX_URL is not configured in config.env")
     
@@ -45,14 +45,45 @@ def download_with_retry():
             opener = create_http_opener()
             req = Request(DROPBOX_URL, headers={"User-Agent": "Mozilla/5.0"})
             
-            # Download
+            # Download with basic progress reporting
             response = opener.open(req, timeout=300)
-            data = response.read()
+            total_size = response.headers.get("Content-Length")
+            total_size = int(total_size) if total_size else None
+            
+            print("  Downloading...", end="", flush=True)
+            data = b""
+            chunk_size = 8192
+            downloaded = 0
+            
+            while True:
+                chunk = response.read(chunk_size)
+                if not chunk:
+                    break
+                data += chunk
+                downloaded += len(chunk)
+                
+                if total_size:
+                    percent = (downloaded / total_size) * 100
+                    size_mb = downloaded / (1024 * 1024)
+                    total_mb = total_size / (1024 * 1024)
+                    print(
+                        f"\r  Downloading... {percent:.1f}% ({size_mb:.1f} MB / {total_mb:.1f} MB)",
+                        end="",
+                        flush=True,
+                    )
+                else:
+                    size_mb = downloaded / (1024 * 1024)
+                    print(f"\r  Downloading... {size_mb:.1f} MB", end="", flush=True)
+            
+            print()  # newline after progress
             
             # Write to temp file
             with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as f:
                 f.write(data)
                 zip_path = Path(f.name)
+            
+            size_mb = len(data) / (1024 * 1024)
+            print(f"  Download complete: {size_mb:.1f} MB")
             
             return zip_path
         except Exception as e:
@@ -119,11 +150,28 @@ def sync():
         # Download and extract
         zip_path = download_with_retry()
         
-        print("Extracting...")
+        print("Extracting archive...")
+        extracted_files = []
         with zipfile.ZipFile(zip_path) as zf:
-            # Extract all files (simpler than manual extraction)
-            zf.extractall(STAGING_DIR)
+            file_list = zf.namelist()
+            total_files = len(file_list)
+            print(f"  Found {total_files} file(s) in archive")
+            
+            for i, member in enumerate(file_list, 1):
+                zf.extract(member, STAGING_DIR)
+                extracted_files.append(member)
+                if i % 10 == 0 or i == total_files:
+                    # Show progress every 10 files or at the end
+                    end_char = "\r" if i < total_files else "\n"
+                    print(f"  Extracted {i}/{total_files} files...", end=end_char, flush=True)
         zip_path.unlink()
+        print(f"  Extraction complete: {len(extracted_files)} file(s)")
+        
+        # Show file statistics
+        media_files = [f for f in STAGING_DIR.rglob("*") if f.is_file()]
+        total_size = sum(f.stat().st_size for f in media_files)
+        total_size_mb = total_size / (1024 * 1024) if total_size else 0
+        print(f"  Total size: {total_size_mb:.1f} MB ({len(media_files)} file(s))")
         
         # Quick playlist check
         if not check_playlist_exists(STAGING_DIR):

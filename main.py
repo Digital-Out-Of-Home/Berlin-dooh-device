@@ -13,7 +13,7 @@ from config import BASE_DIR, get_device_id
 
 MEDIA_DIR = BASE_DIR / "media"
 VLC = Path("/usr/bin/vlc")
-VERSION = "1.9.0"  # Simplified: VLC picks up new playlist naturally on loop cycle
+VERSION = "1.9.1"  # Added detailed progress output for media sync
 
 
 # ============================================================================
