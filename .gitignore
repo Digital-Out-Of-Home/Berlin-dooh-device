@@ -1,1 +1,6 @@
 config.env
+__pycache__
+.vscode
+.idea
+media/*
+.media_staging/

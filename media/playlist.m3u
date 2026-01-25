@@ -1,7 +1,5 @@
 #EXTM3U
-#EXTINF:10,Campaign1234
-Campaign1234.mp4
-#EXTINF:10,Campaign1235
-Campaign1235.mp4
-#EXTINF:10,Campaign1234
-Campaign12346.mp4
+#EXTINF:-1 server-url="/media/campaign/Logo_vers_jpg_1769264368.jpg",name="Logo_vers_jpg_1769264368.jpg"
+/app/media/Logo_vers_jpg_1769264368.jpg
+#EXTINF:-1 server-url="/media/campaign/bm2_1769264697.png",name="bm2_1769264697.png"
+/app/media/bm2_1769264697.png

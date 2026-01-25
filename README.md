@@ -1,83 +1,94 @@
 # VLC Playlist Player
 
-Syncs media from a ZIP URL (e.g. Dropbox) and plays on loop using VLC. Designed for Raspberry Pi digital signage, but works on any Linux box with VLC.
+Syncs media from an API (Smart Sync) and plays on loop using VLC. Designed for Raspberry Pi digital signage, but works on any Linux box with VLC or via Docker.
 
 ### Configuration
 
-All configuration lives in `config.env`:
+All configuration lives in `config.env`. The system uses the following variables:
 
 ```bash
-# Device-specific
+# Device Identity
 DEVICE_ID=berlin1
 
-# Content ZIP URL (e.g. Dropbox ?dl=1 link)
-DROPBOX_URL=https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1
+# API Configuration
+API_URL=https://your-backend-api.com/api/v1/campaign/playlist/
+API_TOKEN=your_secure_api_token
+HOST_URL=https://your-backend-api.com
+# Optional Health Check
+HEALTHCHECK_URL=https://hc-ping.com/your-uuid-here
 ```
 
 Place `config.env` in the same directory as the Python scripts.
 
 ### One-Line Install (Recommended, Raspberry Pi)
 
-On a fresh device:
+On a fresh device, you can install and configure in one go:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+API_TOKEN="your_token" \
+API_URL="https://your-backend.com/api/..." \
+DEVICE_ID="alexanderplatz-01" \
+curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/scripts/bootstrap.sh | sudo -E bash
 ```
 
 This will:
-
 - Install `git` and `vlc`
 - Clone/update the repo to `~/vlc-player`
-- Ensure `config.env` exists
-- Install + enable `vlc-player.service` and `vlc-maintenance.timer`
+- Create `config.env` with your provided secrets (chmod 600)
+- Install + enable `vlc-player.service`, `vlc-maintenance.timer`, and `vlc-healthcheck.timer`
 - Start playback and periodic media sync
+
+### Docker Support
+
+You can run the player in a container (useful for testing or containerized deployments).
+
+1. **Build and Run**:
+   ```bash
+   docker-compose up --build -d
+   ```
+
+2. **Configuration**:
+   Create a `config.env` file in the project root before running.
 
 ### Manual Installation (Alternative)
 
-1. Copy the project folder (e.g. `vlc-player/`) to the device:
-   - `main.py`
-   - `media_sync.py`
-   - `config.py`
-   - `config.env`
-   - `systemd/` (with service + timer units)
-2. Install VLC:
+1. Copy the project folder (e.g. `vlc-player/`) to the device.
+2. Create `config.env` with the required variables (see Configuration above).
+3. Install VLC and Git:
    ```bash
    sudo apt update && sudo apt install -y vlc git
    ```
-3. Enable the services:
+4. Enable the services:
    ```bash
    cd ~/vlc-player
    sudo cp systemd/*.service systemd/*.timer /etc/systemd/system/
    sudo systemctl daemon-reload
-   sudo systemctl enable vlc-player vlc-maintenance.timer
-   sudo systemctl start vlc-player vlc-maintenance.timer
+   sudo systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+   sudo systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
    ```
 
 ### Usage
 
 - **Manual media sync**:
   ```bash
-  python3 ~/vlc-player/media_sync.py
+  python3 src/media_sync.py
   ```
 - **Manual playback**:
   ```bash
-  python3 ~/vlc-player/main.py
+  python3 src/main.py
   ```
 - **Service management**:
   ```bash
   systemctl status vlc-player
   systemctl status vlc-maintenance.timer
-  systemctl restart vlc-player
   journalctl -u vlc-player -f
-  journalctl -u vlc-maintenance -f
   ```
 
 ### Automatic Code Updates (Every 4 Hours, Optional)
 
-Code updates are git-based and handled by `code_update.py`.
+Code updates are git-based and handled by `src/code_update.py`.
 
 1. Install the code-update units:
-
    ```bash
    cd ~/vlc-player
    sudo cp systemd/vlc-code-update.service systemd/vlc-code-update.timer /etc/systemd/system/
@@ -86,92 +97,40 @@ Code updates are git-based and handled by `code_update.py`.
    sudo systemctl start vlc-code-update.timer
    ```
 
-2. To trigger a manual update at any time:
-
-   ```bash
-   cd ~/vlc-player
-   python3 code_update.py
-   ```
-
-This will run `git fetch` + `git reset --hard origin/main` and restart `vlc-player` and `vlc-maintenance.timer`.
-
-### Migrating Existing Devices to Git-Based Setup
-
-On a device that already has an older `vlc-player` install:
-
-```bash
-cd /home/pi
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/migrate_to_git.sh -o migrate_to_git.sh
-chmod +x migrate_to_git.sh
-sudo ./migrate_to_git.sh
-```
-
-The script will:
-
-- Stop existing services
-- Back up the old `~/vlc-player` to `~/vlc-player-old-<timestamp>`
-- Run the latest `bootstrap.sh` from GitHub
-- Restore `config.env` and `media/` from the backup (if present)
-- Restart `vlc-player` and `vlc-maintenance.timer`
-
-You can then optionally enable the 4‑hour code update timer as described above.
+2. This will run `git fetch` + `git reset --hard origin/main` and restart services.
 
 ### How It Works
 
-- `media_sync.py` downloads a ZIP from `DROPBOX_URL`, extracts into a staging directory, checks that at least one `.m3u` playlist exists, then atomically swaps it into `media/`.
-- `main.py` looks for `media/playlist.m3u` and starts VLC in fullscreen loop mode.
-- `vlc-maintenance.timer` runs `media_sync.py` periodically so content stays up to date.
-- `vlc-code-update.timer` (optional) runs `code_update.py` every 4 hours to force a git-based code update.
+- **`src/media_sync.py`** (Smart Sync):
+  1. Authenticates with `API_TOKEN` and fetches the active campaign playlist for `DEVICE_ID` from `API_URL`.
+  2. Compares the list of required media files against files currently on disk.
+  3. Downloads *only* the missing files from `HOST_URL`.
+  4. Removes any files on disk that are no longer in the campaign.
+  5. Generates a local `playlist.m3u` for VLC.
+- **`src/main.py`**: Starts VLC in headless/fullscreen mode playing `media/playlist.m3u`.
+- **`vlc-maintenance.timer`**: Runs `media_sync.py` periodically so content stays up to date.
 
 ### File Structure
 
 ```text
-~/vlc-player/  (or /home/<username>/vlc-player/)
-├── main.py                   # VLC player script (play only)
-├── media_sync.py             # Media sync script (downloads ZIP + extracts)
-├── config.py                 # Shared configuration utilities
-├── config.env                # Configuration file (DEVICE_ID, DROPBOX_URL)
-├── code_update.py            # Git-based code updater (optional timer)
-├── migrate_to_git.sh         # One-shot migration helper for old installs
-├── media/                    # Downloaded media
+~/vlc-player/
+├── config.env                # Secrets (GitIgnored)
+├── Dockerfile                # Container build definition
+├── docker-compose.yml        # Container orchestration
+├── src/
+│   ├── main.py               # VLC player script
+│   ├── media_sync.py         # Smart media sync
+│   ├── health_check.py       # Health check script
+│   ├── code_update.py        # Git-based updater
+│   └── config.py             # Configuration loader
+├── scripts/
+│   ├── bootstrap.sh          # Installer
+│   └── verify_bootstrap.sh   # Verification
+├── media/                    # Local content cache
 │   ├── playlist.m3u
 │   └── *.mp4
-└── systemd/                  # Service files
-    ├── vlc-player.service
-    ├── vlc-maintenance.service
-    ├── vlc-maintenance.timer
-    ├── vlc-code-update.service   # optional
-    ├── vlc-code-update.timer     # optional
+└── systemd/                  # Service units
 ```
 
-### Requirements
-
-- Raspberry Pi (or any Linux device with display)
-- Raspberry Pi OS / Debian-based distro
-- VLC (`sudo apt install vlc`)
-- Git (`sudo apt install git`)
-- Internet connection (for content sync and code updates)
-
-### Troubleshooting
-
-- **No video playing?**
-  ```bash
-  journalctl -u vlc-player -n 50
-  python3 ~/vlc-player/media_sync.py
-  ls ~/vlc-player/media/
-  ```
-- **Sync not working?**
-  ```bash
-  systemctl status vlc-maintenance.timer
-  journalctl -u vlc-maintenance -f
-  cat ~/vlc-player/config.env
-  ```
-- **Code updates not running (optional)?**
-  ```bash
-  systemctl status vlc-code-update.timer
-  journalctl -u vlc-code-update.service -n 50
-  ```
-
-## License
-
+### License
 MIT
