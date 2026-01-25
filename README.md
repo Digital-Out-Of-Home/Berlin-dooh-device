@@ -134,3 +134,11 @@ Code updates are git-based and handled by `src/code_update.py`.
 
 ### License
 MIT
+
+### Testing
+
+To run the unit tests:
+
+```bash
+python3 -m unittest discover tests
+```
