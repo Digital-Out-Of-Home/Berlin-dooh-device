@@ -62,29 +62,21 @@ chown -R "$USER:$USER" "$DIR"
 chmod +x "$DIR/src/"*.py "$DIR/scripts/"*.sh
 
 # --- Ensure config.env exists -------------------------------------------------
-  # Use provided env vars or default to placeholders
-  : "${DEVICE_ID:=$(hostname)}"
-  : "${API_URL:=https://your-api.com/api/v1/media}"
-  : "${API_TOKEN:=placeholder_token}"
-  : "${HOST_URL:=https://your-api.com}"
-  : "${HEALTHCHECK_URL:=}"
+# We now require the user to provide a config.env file in the current directory
+CURRENT_CONFIG="$PWD/config.env"
 
-  # Create the file with 600 permissions (read/write by owner only)
-  touch "$CONFIG_FILE"
+if [ -f "$CURRENT_CONFIG" ]; then
+  echo "Found config.env in current directory, installing..."
+  cp "$CURRENT_CONFIG" "$CONFIG_FILE"
   chmod 600 "$CONFIG_FILE"
-
-  cat > "$CONFIG_FILE" <<EOF
-DEVICE_ID=$DEVICE_ID
-API_URL=$API_URL
-API_TOKEN=$API_TOKEN
-HOST_URL=$HOST_URL
-HEALTHCHECK_URL=$HEALTHCHECK_URL
-EOF
-
   chown "$USER:$USER" "$CONFIG_FILE"
-  echo "Created config.env at $CONFIG_FILE"
+elif [ -f "$CONFIG_FILE" ]; then
+  echo "Found existing configuration at $CONFIG_FILE, preserving..."
 else
-  echo "Using existing config.env at $CONFIG_FILE"
+  echo "ERROR: No config.env found!"
+  echo "Please create a config.env file in the current directory before running this script."
+  echo "See config.env.example for a template."
+  exit 1
 fi
 
 # --- Install systemd services -------------------------------------------------

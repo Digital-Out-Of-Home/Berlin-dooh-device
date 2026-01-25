@@ -22,12 +22,12 @@ Place `config.env` in the same directory as the Python scripts.
 
 ### One-Line Install (Recommended, Raspberry Pi)
 
-On a fresh device, you can install and configure in one go:
+On a fresh device:
+
+1. Create a `config.env` file in your current directory with your device settings.
+2. Run the bootstrap script:
 
 ```bash
-API_TOKEN="your_token" \
-API_URL="https://your-backend.com/api/..." \
-DEVICE_ID="alexanderplatz-01" \
 curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/scripts/bootstrap.sh | sudo -E bash
 ```
 
