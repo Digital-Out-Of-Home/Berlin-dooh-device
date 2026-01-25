@@ -59,17 +59,24 @@ else
 fi
 
 chown -R "$USER:$USER" "$DIR"
+chmod +x "$DIR/src/"*.py "$DIR/scripts/"*.sh
 
 # --- Ensure config.env exists -------------------------------------------------
-if [ ! -f "$CONFIG_FILE" ]; then
-  cat > "$CONFIG_FILE" <<EOF
-DEVICE_ID=berlin1
-DROPBOX_URL=https://www.dropbox.com/scl/fo/YOUR_FOLDER_ID/...?dl=1
-EOF
+# We now require the user to provide a config.env file in the current directory
+CURRENT_CONFIG="$PWD/config.env"
+
+if [ -f "$CURRENT_CONFIG" ]; then
+  echo "Found config.env in current directory, installing..."
+  cp "$CURRENT_CONFIG" "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
   chown "$USER:$USER" "$CONFIG_FILE"
-  echo "Created default config.env at $CONFIG_FILE"
+elif [ -f "$CONFIG_FILE" ]; then
+  echo "Found existing configuration at $CONFIG_FILE, preserving..."
 else
-  echo "Using existing config.env at $CONFIG_FILE"
+  echo "ERROR: No config.env found!"
+  echo "Please create a config.env file in the current directory before running this script."
+  echo "See config.env.example for a template."
+  exit 1
 fi
 
 # --- Install systemd services -------------------------------------------------
@@ -85,8 +92,8 @@ done
 
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable vlc-player vlc-maintenance.timer
-systemctl start vlc-player vlc-maintenance.timer
+systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
 
 echo ""
 echo "=== Bootstrap Complete ==="

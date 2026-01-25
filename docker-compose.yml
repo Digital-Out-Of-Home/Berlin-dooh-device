@@ -1,0 +1,14 @@
+services:
+  dooh-device:
+    build: .
+    container_name: dooh-device
+    volumes:
+      - .:/app
+    env_file:
+      - config.env
+    environment:
+      - PYTHONUNBUFFERED=1
+    stdin_open: true
+    tty: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"

@@ -5,8 +5,8 @@ After=network-online.target
 
 [Service]
 Type=oneshot
-User=pi
-WorkingDirectory=/home/pi/vlc-player
-ExecStart=/usr/bin/python3 /home/pi/vlc-player/code_update.py
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/python3 __DIR__/src/code_update.py
 
 
