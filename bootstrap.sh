@@ -1,7 +1,7 @@
 #!/bin/bash
 # Bootstrap VLC Player for Raspberry Pi using git clone
 # Usage (one-liner):
-#   curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+#   curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 set -e
 
 # --- Detect user/home/dir -----------------------------------------------------
@@ -54,7 +54,7 @@ if [ -d "$DIR/.git" ]; then
   git reset --hard origin/main
 else
   echo "Cloning fresh copy..."
-  sudo -u "$USER" git clone https://github.com/azikatti/Berlin-dooh-device.git "$DIR"
+  sudo -u "$USER" git clone https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git "$DIR"
   cd "$DIR"
 fi
 

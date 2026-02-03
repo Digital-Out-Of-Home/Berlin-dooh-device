@@ -53,7 +53,7 @@ fi
 
 # 3) Run new git-based bootstrap from GitHub
 echo "[3/4] Running new bootstrap.sh from GitHub..."
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 
 # 4) Restore config.env and media (if backup exists)
 echo "[4/4] Restoring config and media (if backup exists)..."

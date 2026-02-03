@@ -21,7 +21,7 @@ Place `config.env` in the same directory as the Python scripts.
 On a fresh device:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 ```
 
 This will:
@@ -101,7 +101,7 @@ On a device that already has an older `vlc-player` install:
 
 ```bash
 cd /home/pi
-curl -sSL https://raw.githubusercontent.com/azikatti/Berlin-dooh-device/main/migrate_to_git.sh -o migrate_to_git.sh
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/migrate_to_git.sh -o migrate_to_git.sh
 chmod +x migrate_to_git.sh
 sudo ./migrate_to_git.sh
 ```
