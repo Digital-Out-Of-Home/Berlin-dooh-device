@@ -11,7 +11,7 @@ Environment=DISPLAY=:0
 Environment=XDG_RUNTIME_DIR=/run/user/1000
 StandardOutput=journal
 StandardError=journal
-ExecStart=/usr/bin/python3 __DIR__/main.py
+ExecStart=/usr/bin/python3 __DIR__/src/main.py
 Restart=always
 RestartSec=5
 

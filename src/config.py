@@ -11,7 +11,7 @@ from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandle
 # CONSTANTS
 # ============================================================================
 
-BASE_DIR = Path(__file__).parent
+BASE_DIR = Path(__file__).parent.parent
 
 # ============================================================================
 # CONFIGURATION FUNCTIONS
@@ -43,8 +43,11 @@ def load_config():
 
     # Minimal config used by the scripts
     return {
-        "DROPBOX_URL": os.environ.get("DROPBOX_URL", ""),
+        "API_URL": os.environ.get("API_URL", "http://localhost:8000/api/v1/campaign/playlist/"),
+        "API_TOKEN": os.environ.get("API_TOKEN", ""),
         "DEVICE_ID": os.environ.get("DEVICE_ID", ""),
+        "HOST_URL": os.environ.get("HOST_URL", "http://localhost:8000"),
+        "HEALTHCHECK_URL": os.environ.get("HEALTHCHECK_URL", ""),
     }
 
 
