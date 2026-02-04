@@ -43,18 +43,18 @@ apt install -y git vlc
 # --- Clone or update repo -----------------------------------------------------
 echo "[2/3] Fetching code from GitHub..."
 
+REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
+
 if [ -d "$DIR/.git" ]; then
   echo "Repo already exists, updating..."
   cd "$DIR"
-  if [ -n "$(git status --porcelain)" ]; then
-    echo "Working tree dirty, refusing to overwrite local changes."
-    exit 1
-  fi
+  git remote set-url origin "$REPO_URL"
   git fetch origin
   git reset --hard origin/main
+  git clean -fd
 else
   echo "Cloning fresh copy..."
-  sudo -u "$USER" git clone https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git "$DIR"
+  sudo -u "$USER" git clone "$REPO_URL" "$DIR"
   cd "$DIR"
 fi
 
