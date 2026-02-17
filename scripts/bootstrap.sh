@@ -107,8 +107,8 @@ done
 
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
-systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer vlc-scheduler-sync.timer vlc-power-control.timer
+systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer vlc-scheduler-sync.timer vlc-power-control.timer
 
 echo ""
 echo "=== Bootstrap Complete ==="

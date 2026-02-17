@@ -64,8 +64,8 @@ You can run the player in a container (useful for testing or containerized deplo
    cd ~/vlc-player
    sudo cp systemd/*.service systemd/*.timer /etc/systemd/system/
    sudo systemctl daemon-reload
-   sudo systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
-   sudo systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+   sudo systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer vlc-scheduler-sync.timer vlc-power-control.timer
+   sudo systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer vlc-scheduler-sync.timer vlc-power-control.timer
    ```
 
 ### Usage
