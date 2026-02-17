@@ -139,6 +139,24 @@ You can then optionally enable the 4‑hour code update timer as described above
   5. Generates a local `playlist.m3u` for VLC.
 - **`src/main.py`**: Starts VLC in headless/fullscreen mode playing `media/playlist.m3u`.
 - **`vlc-maintenance.timer`**: Runs `media_sync.py` periodically so content stays up to date.
+- **`src/scheduler_sync.py`**: Fetches the device's operating schedule from the API (`/api/devices/{ID}/`) and saves it locally.
+- **`src/power_control.py`**: checks the local schedule every minute and turns the TV on or off using HDMI-CEC (`cec-client`).
+
+### Scheduled Power Control
+
+The device can automatically turn the TV on and off based on a schedule managed in the backend.
+
+1.  **Schedule Sync**: `vlc-scheduler-sync.service` runs every 15 minutes to fetch the latest schedule from the API.
+2.  **Power Execution**: `vlc-power-control.service` runs every minute. It checks the current time against the local schedule and sends `on` or `standby` commands to the TV via HDMI-CEC.
+
+**Requirements**:
+- The device must support HDMI-CEC (Raspberry Pi usually does).
+- `cec-utils` must be installed (handled by `bootstrap.sh`).
+- Values in the generic `API_URL` / `HOST_URL` config must point to a backend sending the expected device JSON structure.
+
+**Manual Verification**:
+- Force schedule sync: `python3 src/scheduler_sync.py`
+- Force power check: `python3 src/power_control.py`
 
 ### File Structure
 
@@ -150,6 +168,8 @@ You can then optionally enable the 4‑hour code update timer as described above
 ├── src/
 │   ├── main.py               # VLC player script
 │   ├── media_sync.py         # Smart media sync
+│   ├── scheduler_sync.py     # Schedule fetcher
+│   ├── power_control.py      # HDMI-CEC power control
 │   ├── health_check.py       # Health check script
 │   ├── code_update.py        # Git-based updater
 │   └── config.py             # Configuration loader
@@ -158,6 +178,7 @@ You can then optionally enable the 4‑hour code update timer as described above
 │   └── verify_bootstrap.sh   # Verification
 ├── media/                    # Local content cache
 │   ├── playlist.m3u
+│   ├── schedule.json         # Cached power schedule
 │   └── *.mp4
 └── systemd/                  # Service units
 ```

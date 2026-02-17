@@ -4,6 +4,17 @@
 #   curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 set -e
 
+# --- Ensure Root Privileges ---------------------------------------------------
+if [ "$(id -u)" -ne 0 ]; then
+  echo "This script must be run as root. Attempting to elevate..."
+  if [ -f "$0" ]; then
+    exec sudo bash "$0" "$@"
+  else
+    echo "This script must be run as root. If piping, use 'sudo bash'."
+    exit 1
+  fi
+fi
+
 # --- Detect user/home/dir -----------------------------------------------------
 if [ -n "$SUDO_USER" ]; then
   USER="$SUDO_USER"
@@ -38,7 +49,7 @@ echo "Install directory: $DIR"
 # --- Install dependencies -----------------------------------------------------
 echo "[1/3] Installing dependencies (git, vlc)..."
 apt update
-apt install -y git vlc
+apt install -y git vlc cec-utils
 
 # --- Clone or update repo -----------------------------------------------------
 echo "[2/3] Fetching code from GitHub..."
@@ -54,7 +65,7 @@ if [ -d "$DIR/.git" ]; then
   git reset --hard origin/main
 else
   echo "Cloning fresh copy..."
-  sudo -u "$USER" git clone https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git "$DIR"
+   git clone https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git "$DIR"
   cd "$DIR"
 fi
 
@@ -87,6 +98,10 @@ for service_file in "$DIR/systemd/"*.service "$DIR/systemd/"*.timer; do
   if [ -f "$service_file" ]; then
     sed -i "s|__USER__|$USER|g" "$service_file"
     sed -i "s|__DIR__|$DIR|g" "$service_file"
+    
+    # Replace hardcoded UID 1000 for XDG_RUNTIME_DIR if the user is not 1000
+    TARGET_UID=$(id -u "$USER")
+    sed -i "s|/run/user/1000|/run/user/$TARGET_UID|g" "$service_file"
   fi
 done
 

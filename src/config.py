@@ -48,6 +48,7 @@ def load_config():
         "DEVICE_ID": os.environ.get("DEVICE_ID", ""),
         "HOST_URL": os.environ.get("HOST_URL", "http://localhost:8000"),
         "HEALTHCHECK_URL": os.environ.get("HEALTHCHECK_URL", ""),
+        "SCHEDULE_API_URL": os.environ.get("SCHEDULE_API_URL", ""),
     }
 
 
