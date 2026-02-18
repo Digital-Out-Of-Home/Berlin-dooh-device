@@ -28,7 +28,7 @@ On a fresh device:
 2. Run the bootstrap script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/scripts/bootstrap.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 ```
 
 This will:
@@ -36,7 +36,7 @@ This will:
 - Install `git` and `vlc`
 - Clone/update the repo to `~/vlc-player`
 - Create `config.env` with your provided secrets (chmod 600)
-- Install + enable `vlc-player.service`, `vlc-maintenance.timer`, and `vlc-healthcheck.timer`
+- Install + enable `vlc-player.service` and `vlc-maintenance.timer`
 - Start playback and periodic media sync
 
 ### Docker Support
@@ -64,8 +64,8 @@ You can run the player in a container (useful for testing or containerized deplo
    cd ~/vlc-player
    sudo cp systemd/*.service systemd/*.timer /etc/systemd/system/
    sudo systemctl daemon-reload
-   sudo systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
-   sudo systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+   sudo systemctl enable vlc-player vlc-maintenance.timer
+   sudo systemctl start vlc-player vlc-maintenance.timer
    ```
 
 ### Usage
@@ -144,6 +144,7 @@ You can then optionally enable the 4‑hour code update timer as described above
 
 ```text
 ~/vlc-player/
+├── bootstrap.sh              # Installer (run from here; config.env next to it)
 ├── config.env                # Secrets (GitIgnored)
 ├── Dockerfile                # Container build definition
 ├── docker-compose.yml        # Container orchestration
@@ -154,7 +155,6 @@ You can then optionally enable the 4‑hour code update timer as described above
 │   ├── code_update.py        # Git-based updater
 │   └── config.py             # Configuration loader
 ├── scripts/
-│   ├── bootstrap.sh          # Installer
 │   └── verify_bootstrap.sh   # Verification
 ├── media/                    # Local content cache
 │   ├── playlist.m3u

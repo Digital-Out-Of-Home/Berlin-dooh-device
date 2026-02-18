@@ -84,12 +84,12 @@ fi
 
 # Required code files
 REQUIRED_FILES=(
+    "bootstrap.sh"
     "src/main.py"
     "src/config.py"
     "src/media_sync.py"
     "src/code_update.py"
     "src/health_check.py"
-    "scripts/bootstrap.sh"
     "scripts/verify_bootstrap.sh"
     "config.env"
 )

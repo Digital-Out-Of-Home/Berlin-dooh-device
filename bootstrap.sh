@@ -2,6 +2,8 @@
 # Bootstrap VLC Player for Raspberry Pi using git clone
 # Usage (one-liner):
 #   curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+# Or from repo root (config.env must be in current directory):
+#   cd ~/vlc-player && sudo ./bootstrap.sh
 set -e
 
 # --- Detect user/home/dir -----------------------------------------------------
@@ -60,9 +62,10 @@ fi
 
 chown -R "$USER:$USER" "$DIR"
 chmod +x "$DIR/src/"*.py "$DIR/scripts/"*.sh
+[ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
 
 # --- Ensure config.env exists -------------------------------------------------
-# We now require the user to provide a config.env file in the current directory
+# Look for config.env in current directory (run from repo root so config.env is next to this script)
 CURRENT_CONFIG="$PWD/config.env"
 
 if [ -f "$CURRENT_CONFIG" ]; then
@@ -74,7 +77,9 @@ elif [ -f "$CONFIG_FILE" ]; then
   echo "Found existing configuration at $CONFIG_FILE, preserving..."
 else
   echo "ERROR: No config.env found!"
-  echo "Please create a config.env file in the current directory before running this script."
+  echo "Please run this script from the repo root (directory that contains config.env), e.g.:"
+  echo "  cd $DIR && sudo ./bootstrap.sh"
+  echo "Or put config.env in your current directory before running."
   echo "See config.env.example for a template."
   exit 1
 fi
@@ -92,8 +97,8 @@ done
 
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
-systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+systemctl enable vlc-player vlc-maintenance.timer
+systemctl start vlc-player vlc-maintenance.timer
 
 #
 # --- Configure display rotation via wlr-randr (Wayland) -----------------------

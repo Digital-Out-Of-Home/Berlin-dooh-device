@@ -59,7 +59,7 @@ fi
 
 # 4) Run fresh bootstrap from GitHub
 echo "[4/4] Running bootstrap.sh from GitHub..."
-curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/scripts/bootstrap.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
 
 echo ""
 echo "=== Done. Fresh install completed via bootstrap. ==="
