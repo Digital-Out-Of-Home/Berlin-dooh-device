@@ -1,0 +1,12 @@
+[Unit]
+Description=VLC Player code update (forced git reset)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/python3 __DIR__/src/code_update.py
+
+

@@ -1,0 +1,132 @@
+#!/bin/bash
+# Bootstrap VLC Player for Raspberry Pi using git clone
+# Usage (one-liner):
+#   curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+set -e
+
+# --- Detect user/home/dir -----------------------------------------------------
+if [ -n "$SUDO_USER" ]; then
+  USER="$SUDO_USER"
+elif [ "$USER" != "root" ] && [ -n "$USER" ]; then
+  # Already running as a non-root user
+  USER="$USER"
+else
+  # Running as root, try to detect the actual user
+  # First try to get the user from the process that invoked sudo
+  USER=$(logname 2>/dev/null || echo "")
+  if [ -z "$USER" ] || [ "$USER" = "root" ]; then
+    # Fallback: find first non-root user with UID >= 1000
+    USER=$(getent passwd | awk -F: '$3 >= 1000 && $1 != "nobody" {print $1; exit}')
+    [ -z "$USER" ] && USER="pi"
+  fi
+fi
+
+# Get the actual home directory for this user (don't assume /home/$USER)
+HOME_DIR=$(getent passwd "$USER" | cut -d: -f6)
+if [ -z "$HOME_DIR" ] || [ ! -d "$HOME_DIR" ]; then
+  # Fallback to /home/$USER if getent fails
+  HOME_DIR="/home/$USER"
+fi
+
+DIR="$HOME_DIR/vlc-player"
+CONFIG_FILE="$DIR/config.env"
+
+echo "=== VLC Player Bootstrap ==="
+echo "User: $USER"
+echo "Install directory: $DIR"
+
+# --- Install dependencies -----------------------------------------------------
+echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
+apt update
+apt install -y git vlc wlr-randr raindrop
+
+# --- Clone or update repo -----------------------------------------------------
+echo "[2/3] Fetching code from GitHub..."
+
+REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
+
+if [ -d "$DIR/.git" ]; then
+  echo "Repo already exists, updating..."
+  cd "$DIR"
+  git remote set-url origin "$REPO_URL"
+  git fetch origin
+  git reset --hard origin/main
+  git clean -fd
+else
+  echo "Cloning fresh copy..."
+  sudo -u "$USER" git clone "$REPO_URL" "$DIR"
+  cd "$DIR"
+fi
+
+chown -R "$USER:$USER" "$DIR"
+chmod +x "$DIR/src/"*.py "$DIR/scripts/"*.sh
+
+# --- Ensure config.env exists -------------------------------------------------
+# We now require the user to provide a config.env file in the current directory
+CURRENT_CONFIG="$PWD/config.env"
+
+if [ -f "$CURRENT_CONFIG" ]; then
+  echo "Found config.env in current directory, installing..."
+  cp "$CURRENT_CONFIG" "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
+  chown "$USER:$USER" "$CONFIG_FILE"
+elif [ -f "$CONFIG_FILE" ]; then
+  echo "Found existing configuration at $CONFIG_FILE, preserving..."
+else
+  echo "ERROR: No config.env found!"
+  echo "Please create a config.env file in the current directory before running this script."
+  echo "See config.env.example for a template."
+  exit 1
+fi
+
+# --- Install systemd services -------------------------------------------------
+echo "[3/3] Installing systemd services..."
+
+# Replace placeholders in service files before copying
+for service_file in "$DIR/systemd/"*.service "$DIR/systemd/"*.timer; do
+  if [ -f "$service_file" ]; then
+    sed -i "s|__USER__|$USER|g" "$service_file"
+    sed -i "s|__DIR__|$DIR|g" "$service_file"
+  fi
+done
+
+cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+systemctl start vlc-player vlc-maintenance.timer vlc-healthcheck.timer
+
+#
+# --- Configure display rotation via wlr-randr (Wayland) -----------------------
+#
+echo "[4/3] Configuring display rotation for Wayland (HDMI-A-1 -> 90 degrees)..."
+
+USER_UID=$(id -u "$USER")
+USER_SYSTEMD_DIR="$HOME_DIR/.config/systemd/user"
+
+sudo -u "$USER" mkdir -p "$USER_SYSTEMD_DIR"
+
+sudo -u "$USER" tee "$USER_SYSTEMD_DIR/display-rotate.service" >/dev/null <<EOF
+[Unit]
+Description=Rotate HDMI-A-1 display using wlr-randr
+After=graphical-session.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/wlr-randr --output HDMI-A-1 --transform 90
+
+[Install]
+WantedBy=graphical-session.target
+EOF
+
+# Allow user services to run even without an active login session
+loginctl enable-linger "$USER" || true
+
+# Enable and reload the user systemd service (for Wayland session)
+sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" systemctl --user daemon-reload || true
+sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" systemctl --user enable display-rotate.service || true
+
+echo ""
+echo "=== Bootstrap Complete ==="
+echo "User:   $USER"
+echo "Dir:    $DIR"
+echo "Config: $CONFIG_FILE"

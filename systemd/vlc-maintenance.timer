@@ -1,0 +1,11 @@
+[Unit]
+Description=Sync media and check for updates every 5 minutes
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+RandomizedDelaySec=2min
+
+[Install]
+WantedBy=timers.target
+

@@ -1,0 +1,19 @@
+[Unit]
+Description=VLC Player
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__DIR__
+Environment=DISPLAY=:0
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+StandardOutput=journal
+StandardError=journal
+ExecStart=/usr/bin/python3 __DIR__/src/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
