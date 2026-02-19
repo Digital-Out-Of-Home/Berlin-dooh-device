@@ -131,7 +131,7 @@ echo "[$(date -Iseconds)] [3/4] Systemd services installed and started: OK"
 #
 echo "[4/4] Display rotation: display-rotate.timer runs 1 min after boot (HDMI-A-1 -> 90°)."
 # Run rotation once now if a Wayland session is active (e.g. local login)
-sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" "$DIR/scripts/rotate_screen_right.sh" 2>/dev/null || true
+sudo -u "$USER" WAYLAND_DISPLAY=wayland-1 XDG_RUNTIME_DIR="/run/user/$USER_UID" "$DIR/scripts/rotate_screen_right.sh" || true
 echo "[$(date -Iseconds)] [4/4] Display rotation (wlr-randr): OK"
 
 # --- Executable permissions (once after all steps that may overwrite files) ------
