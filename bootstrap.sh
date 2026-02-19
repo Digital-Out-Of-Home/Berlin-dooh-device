@@ -125,28 +125,13 @@ done
 echo "[$(date -Iseconds)] [3/4] Systemd services installed and started: OK"
 
 #
-# --- Configure display rotation via wlr-randr (Wayland) -----------------------
-# Use desktop autostart so the script runs in a real graphical session (correct
-# WAYLAND_DISPLAY / XDG_RUNTIME_DIR). The systemd user unit was removed because
-# it ran without a session and failed with "failed to connect to display".
+# --- Display rotation (wlr-randr) ---------------------------------------------
+# display-rotate.timer (installed in step [3/4]) runs display-rotate.service
+# 1 minute after boot with WAYLAND_DISPLAY/XDG_RUNTIME_DIR set so wlr-randr works.
 #
-echo "[4/4] Configuring display rotation for Wayland (HDMI-A-1 -> 90 degrees)..."
-
-AUTOSTART_DIR="$HOME_DIR/.config/autostart"
-sudo -u "$USER" mkdir -p "$AUTOSTART_DIR"
-
-sudo -u "$USER" tee "$AUTOSTART_DIR/display-rotate.desktop" >/dev/null <<EOF
-[Desktop Entry]
-Type=Application
-Name=Display Rotate
-Comment=Rotate HDMI-A-1 to 90° via wlr-randr at session start
-Exec=$DIR/scripts/rotate_screen_right.sh
-X-GNOME-Autostart-enabled=true
-EOF
-
+echo "[4/4] Display rotation: display-rotate.timer runs 1 min after boot (HDMI-A-1 -> 90°)."
 # Run rotation once now if a Wayland session is active (e.g. local login)
 sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" "$DIR/scripts/rotate_screen_right.sh" 2>/dev/null || true
-
 echo "[$(date -Iseconds)] [4/4] Display rotation (wlr-randr): OK"
 
 # --- Executable permissions (once after all steps that may overwrite files) ------

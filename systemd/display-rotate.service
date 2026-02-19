@@ -1,0 +1,10 @@
+[Unit]
+Description=Rotate display via wlr-randr (Wayland), run once after boot
+After=local-fs.target
+
+[Service]
+Type=oneshot
+User=__USER__
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=XDG_RUNTIME_DIR=/run/user/__USER_UID__
+ExecStart=__DIR__/scripts/rotate_screen_right.sh
