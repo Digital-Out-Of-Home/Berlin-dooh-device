@@ -1,0 +1,11 @@
+[Unit]
+Description=Run VLC Player Power Control every minute
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=1min
+Unit=vlc-power-control.service
+
+[Install]
+WantedBy=timers.target
+

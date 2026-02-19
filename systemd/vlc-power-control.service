@@ -1,0 +1,11 @@
+[Unit]
+Description=VLC Player Power Control
+After=network.target
+
+[Service]
+Type=oneshot
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=/usr/bin/python3 __DIR__/src/power_control.py
+EnvironmentFile=__DIR__/config.env
+

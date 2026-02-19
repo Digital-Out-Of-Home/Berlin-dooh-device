@@ -1,0 +1,11 @@
+[Unit]
+Description=Run VLC Player Schedule Sync every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+Unit=vlc-scheduler-sync.service
+
+[Install]
+WantedBy=timers.target
+

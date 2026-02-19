@@ -77,9 +77,9 @@ if [ -f "$WAYFIRE_INI" ]; then
 fi
 
 # --- Install dependencies -----------------------------------------------------
-echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
+echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop, cec-utils)..."
 apt update
-apt install -y git vlc wlr-randr raindrop
+apt install -y git vlc wlr-randr raindrop cec-utils
 echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 
 # --- Clone or update repo -----------------------------------------------------
