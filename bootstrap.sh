@@ -32,18 +32,29 @@ fi
 
 DIR="$HOME_DIR/vlc-player"
 CONFIG_FILE="$DIR/config.env"
+SECRETS_FILE="$DIR/secrets.env"
+USER_UID=$(id -u "$USER")
+
+# Installation log on user's Desktop
+INSTALL_LOG="$HOME_DIR/Desktop/berlin-dooh-bootstrap.log"
+mkdir -p "$(dirname "$INSTALL_LOG")"
+touch "$INSTALL_LOG"
+chown "$USER:$USER" "$(dirname "$INSTALL_LOG")" "$INSTALL_LOG" 2>/dev/null || true
+exec > >(tee -a "$INSTALL_LOG") 2>&1
+echo "[$(date -Iseconds)] === Bootstrap started (user=$USER, dir=$DIR) ==="
 
 echo "=== VLC Player Bootstrap ==="
 echo "User: $USER"
 echo "Install directory: $DIR"
 
 # --- Install dependencies -----------------------------------------------------
-echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
+echo "[1/4] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
 apt update
 apt install -y git vlc wlr-randr raindrop
+echo "[$(date -Iseconds)] [1/4] Dependencies: OK"
 
 # --- Clone or update repo -----------------------------------------------------
-echo "[2/3] Fetching code from GitHub..."
+echo "[2/4] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
 
@@ -61,75 +72,89 @@ else
 fi
 
 chown -R "$USER:$USER" "$DIR"
-chmod +x "$DIR/src/"*.py "$DIR/scripts/"*.sh
-[ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
 
-# --- Ensure config.env exists -------------------------------------------------
-# Look for config.env in current directory (run from repo root so config.env is next to this script)
-CURRENT_CONFIG="$PWD/config.env"
+echo "[$(date -Iseconds)] [2/4] Repo clone/update: OK"
 
-if [ -f "$CURRENT_CONFIG" ]; then
-  echo "Found config.env in current directory, installing..."
-  cp "$CURRENT_CONFIG" "$CONFIG_FILE"
-  chmod 600 "$CONFIG_FILE"
-  chown "$USER:$USER" "$CONFIG_FILE"
-elif [ -f "$CONFIG_FILE" ]; then
-  echo "Found existing configuration at $CONFIG_FILE, preserving..."
-else
-  echo "ERROR: No config.env found!"
-  echo "Please run this script from the repo root (directory that contains config.env), e.g.:"
-  echo "  cd $DIR && sudo ./bootstrap.sh"
-  echo "Or put config.env in your current directory before running."
-  echo "See config.env.example for a template."
+# --- Config: config.env (static, from repo) + secrets.env (copy from USB) -------
+# config.env is in the repo and already in $DIR after clone; code_update will overwrite it (OK).
+# secrets.env is NOT in Git: copy from USB to $DIR after bootstrap, or from PWD if present now.
+
+if [ ! -f "$CONFIG_FILE" ]; then
+  echo "ERROR: config.env missing in $DIR (expected from repo after clone)."
   exit 1
 fi
+echo "Static config: $CONFIG_FILE (from repo)"
+
+if [ -f "$PWD/secrets.env" ]; then
+  cp "$PWD/secrets.env" "$SECRETS_FILE"
+  chmod 600 "$SECRETS_FILE"
+  chown "$USER:$USER" "$SECRETS_FILE"
+  echo "Secrets installed from current directory: $SECRETS_FILE"
+elif [ -f "$SECRETS_FILE" ]; then
+  echo "Secrets already in place: $SECRETS_FILE"
+else
+  echo "WARNING: No secrets.env found. Copy secrets.env from USB to $DIR after bootstrap (DEVICE_ID, API_TOKEN)."
+fi
+echo "[$(date -Iseconds)] Config: OK"
 
 # --- Install systemd services -------------------------------------------------
-echo "[3/3] Installing systemd services..."
+echo "[3/4] Installing systemd services..."
 
 # Replace placeholders in service files before copying
 for service_file in "$DIR/systemd/"*.service "$DIR/systemd/"*.timer; do
   if [ -f "$service_file" ]; then
     sed -i "s|__USER__|$USER|g" "$service_file"
     sed -i "s|__DIR__|$DIR|g" "$service_file"
+    sed -i "s|__USER_UID__|$USER_UID|g" "$service_file"
   fi
 done
 
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable vlc-player vlc-maintenance.timer
-systemctl start vlc-player vlc-maintenance.timer
+
+# Enable only units with [Install]: main service + timers (oneshot services are triggered by timers)
+systemctl enable vlc-player.service
+for f in "$DIR/systemd/"*.timer; do
+  [ -f "$f" ] && systemctl enable "$(basename "$f")"
+done
+# Start the long-running service and all timers
+systemctl start vlc-player
+for f in "$DIR/systemd/"*.timer; do
+  [ -f "$f" ] && systemctl start "$(basename "$f")"
+done
+echo "[$(date -Iseconds)] [3/4] Systemd services installed and started: OK"
 
 #
 # --- Configure display rotation via wlr-randr (Wayland) -----------------------
+# Use desktop autostart so the script runs in a real graphical session (correct
+# WAYLAND_DISPLAY / XDG_RUNTIME_DIR). The systemd user unit was removed because
+# it ran without a session and failed with "failed to connect to display".
 #
-echo "[4/3] Configuring display rotation for Wayland (HDMI-A-1 -> 90 degrees)..."
+echo "[4/4] Configuring display rotation for Wayland (HDMI-A-1 -> 90 degrees)..."
 
-USER_UID=$(id -u "$USER")
-USER_SYSTEMD_DIR="$HOME_DIR/.config/systemd/user"
+AUTOSTART_DIR="$HOME_DIR/.config/autostart"
+sudo -u "$USER" mkdir -p "$AUTOSTART_DIR"
 
-sudo -u "$USER" mkdir -p "$USER_SYSTEMD_DIR"
-
-sudo -u "$USER" tee "$USER_SYSTEMD_DIR/display-rotate.service" >/dev/null <<EOF
-[Unit]
-Description=Rotate HDMI-A-1 display using wlr-randr
-After=graphical-session.target
-
-[Service]
-Type=oneshot
-ExecStart=/usr/bin/wlr-randr --output HDMI-A-1 --transform 90
-
-[Install]
-WantedBy=graphical-session.target
+sudo -u "$USER" tee "$AUTOSTART_DIR/display-rotate.desktop" >/dev/null <<EOF
+[Desktop Entry]
+Type=Application
+Name=Display Rotate
+Comment=Rotate HDMI-A-1 to 90° via wlr-randr at session start
+Exec=$DIR/scripts/rotate_screen_right.sh
+X-GNOME-Autostart-enabled=true
 EOF
 
-# Allow user services to run even without an active login session
-loginctl enable-linger "$USER" || true
+# Run rotation once now if a Wayland session is active (e.g. local login)
+sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" "$DIR/scripts/rotate_screen_right.sh" 2>/dev/null || true
 
-# Enable and reload the user systemd service (for Wayland session)
-sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" systemctl --user daemon-reload || true
-sudo -u "$USER" XDG_RUNTIME_DIR="/run/user/$USER_UID" systemctl --user enable display-rotate.service || true
+echo "[$(date -Iseconds)] [4/4] Display rotation (wlr-randr): OK"
 
+# --- Executable permissions (once after all steps that may overwrite files) ------
+[ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
+find "$DIR/src" -maxdepth 1 -type f -name "*.py" -exec chmod +x {} \;
+find "$DIR/scripts" -maxdepth 1 -type f -name "*.sh" -exec chmod +x {} \;
+
+echo "[$(date -Iseconds)] === Bootstrap finished ==="
 echo ""
 echo "=== Bootstrap Complete ==="
 echo "User:   $USER"
