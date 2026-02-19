@@ -124,6 +124,26 @@ for f in "$DIR/systemd/"*.timer; do
 done
 echo "[$(date -Iseconds)] [3/3] Systemd services installed and started: OK"
 
+# --- Desktop helper for manual screen rotation (optional) ----------------------
+DESKTOP_DIR="$HOME_DIR/Desktop"
+ROTATE_HELPER="$DESKTOP_DIR/RotateScreen.desktop"
+
+mkdir -p "$DESKTOP_DIR"
+chown "$USER:$USER" "$DESKTOP_DIR" 2>/dev/null || true
+
+sudo -u "$USER" tee "$ROTATE_HELPER" >/dev/null <<EOF
+[Desktop Entry]
+Type=Application
+Name=Rotate Screen 90°
+Comment=Rotate HDMI-A-1 to 90° using wlr-randr
+Exec=$DIR/scripts/rotate_screen_right.sh
+Terminal=true
+Icon=display
+EOF
+
+sudo -u "$USER" chmod +x "$ROTATE_HELPER" 2>/dev/null || true
+echo "Desktop helper created: $ROTATE_HELPER (double-click to rotate)"
+
 # --- Executable permissions (once after all steps that may overwrite files) ------
 [ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
 find "$DIR/src" -maxdepth 1 -type f -name "*.py" -exec chmod +x {} \;
