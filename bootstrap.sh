@@ -35,6 +35,10 @@ CONFIG_FILE="$DIR/config.env"
 SECRETS_FILE="$DIR/secrets.env"
 USER_UID=$(id -u "$USER")
 
+# Track whether we changed rotation-related settings (for optional reboot)
+ROTATION_CHANGED=false
+WAYFIRE_REMOVED=false
+
 # Installation log on user's Desktop
 INSTALL_LOG="$HOME_DIR/Desktop/berlin-dooh-bootstrap.log"
 mkdir -p "$(dirname "$INSTALL_LOG")"
@@ -46,6 +50,31 @@ echo "[$(date -Iseconds)] === Bootstrap started (user=$USER, dir=$DIR) ==="
 echo "=== VLC Player Bootstrap ==="
 echo "User: $USER"
 echo "Install directory: $DIR"
+
+# --- Force kernel-level 90° rotation on HDMI-A-1 (Pi 5 / Wayland) ------------
+CMDLINE_PATH="/boot/firmware/cmdline.txt"
+ROTATE_ARG="video=HDMI-A-1:rotate=90"
+
+if [ -f "$CMDLINE_PATH" ]; then
+  if grep -q "$ROTATE_ARG" "$CMDLINE_PATH"; then
+    echo "Kernel rotation already present in $CMDLINE_PATH"
+  else
+    echo "Adding kernel rotation to $CMDLINE_PATH: $ROTATE_ARG"
+    # Append to the single existing line (no new line created)
+    sudo sed -i "s|\$| $ROTATE_ARG|" "$CMDLINE_PATH"
+    ROTATION_CHANGED=true
+  fi
+else
+  echo "WARNING: $CMDLINE_PATH not found; skipping kernel rotation config."
+fi
+
+# --- Clean up Wayfire compositor overrides ------------------------------------
+WAYFIRE_INI="$HOME_DIR/.config/wayfire.ini"
+if [ -f "$WAYFIRE_INI" ]; then
+  echo "Removing cached Wayfire config at $WAYFIRE_INI"
+  sudo rm -f "$WAYFIRE_INI" || true
+  WAYFIRE_REMOVED=true
+fi
 
 # --- Install dependencies -----------------------------------------------------
 echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
@@ -148,6 +177,12 @@ echo "Desktop helper created: $ROTATE_HELPER (double-click to rotate)"
 [ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
 find "$DIR/src" -maxdepth 1 -type f -name "*.py" -exec chmod +x {} \;
 find "$DIR/scripts" -maxdepth 1 -type f -name "*.sh" -exec chmod +x {} \;
+
+if [ "$ROTATION_CHANGED" = true ] || [ "$WAYFIRE_REMOVED" = true ]; then
+  echo "Rotation settings applied. Rebooting in 5 seconds..."
+  sleep 5
+  sudo reboot
+fi
 
 echo "[$(date -Iseconds)] === Bootstrap finished ==="
 echo ""
