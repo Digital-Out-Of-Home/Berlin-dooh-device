@@ -48,13 +48,13 @@ echo "User: $USER"
 echo "Install directory: $DIR"
 
 # --- Install dependencies -----------------------------------------------------
-echo "[1/4] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
+echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop)..."
 apt update
 apt install -y git vlc wlr-randr raindrop
-echo "[$(date -Iseconds)] [1/4] Dependencies: OK"
+echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 
 # --- Clone or update repo -----------------------------------------------------
-echo "[2/4] Fetching code from GitHub..."
+echo "[2/3] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
 
@@ -73,7 +73,7 @@ fi
 
 chown -R "$USER:$USER" "$DIR"
 
-echo "[$(date -Iseconds)] [2/4] Repo clone/update: OK"
+echo "[$(date -Iseconds)] [2/3] Repo clone/update: OK"
 
 # --- Config: config.env (static, from repo) + secrets.env (copy from USB) -------
 # config.env is in the repo and already in $DIR after clone; code_update will overwrite it (OK).
@@ -98,7 +98,7 @@ fi
 echo "[$(date -Iseconds)] Config: OK"
 
 # --- Install systemd services -------------------------------------------------
-echo "[3/4] Installing systemd services..."
+echo "[3/3] Installing systemd services..."
 
 # Replace placeholders in service files before copying
 for service_file in "$DIR/systemd/"*.service "$DIR/systemd/"*.timer; do
@@ -122,17 +122,7 @@ systemctl start vlc-player
 for f in "$DIR/systemd/"*.timer; do
   [ -f "$f" ] && systemctl start "$(basename "$f")"
 done
-echo "[$(date -Iseconds)] [3/4] Systemd services installed and started: OK"
-
-#
-# --- Display rotation (wlr-randr) ---------------------------------------------
-# display-rotate.timer (installed in step [3/4]) runs display-rotate.service
-# 1 minute after boot with WAYLAND_DISPLAY/XDG_RUNTIME_DIR set so wlr-randr works.
-#
-echo "[4/4] Display rotation: display-rotate.timer runs 1 min after boot (HDMI-A-1 -> 90°)."
-# Run rotation once now if a Wayland session is active (e.g. local login)
-sudo -u "$USER" WAYLAND_DISPLAY=wayland-1 XDG_RUNTIME_DIR="/run/user/$USER_UID" "$DIR/scripts/rotate_screen_right.sh" || true
-echo "[$(date -Iseconds)] [4/4] Display rotation (wlr-randr): OK"
+echo "[$(date -Iseconds)] [3/3] Systemd services installed and started: OK"
 
 # --- Executable permissions (once after all steps that may overwrite files) ------
 [ -f "$DIR/bootstrap.sh" ] && chmod +x "$DIR/bootstrap.sh"
