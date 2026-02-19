@@ -17,29 +17,83 @@ BASE_DIR = Path(__file__).parent.parent
 # CONFIGURATION FUNCTIONS
 # ============================================================================
 
-def load_config():
-    """Load configuration from local config.env file.
 
-    - Parses KEY=VALUE lines (ignores comments/blank lines)
-    - Sets them in os.environ
-    - Returns a minimal dict with just the keys the player actually needs
+def _load_env_file(path: Path) -> None:
+    """Parse KEY=VALUE from a file and set os.environ. Skips comments and blank lines."""
+    if not path.exists():
+        return
+    try:
+        content = path.read_text()
+    except Exception as e:
+        print(f"Warning: Could not read {path}: {e}")
+        return
+    for line in content.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        os.environ[key.strip()] = value.strip()
+
+
+# region agent log
+def _debug_log(hypothesis_id: str, message: str, data: dict) -> None:
+    """Append a single NDJSON debug log line. Fail-safe: ignores all errors.
+
+    NOTE: This is for local debugging only; errors are swallowed so it is safe on devices.
     """
-    config_file = BASE_DIR / "config.env"
-    content = ""
+    log_path = Path("/Users/azeraliyev/source/DOOH2/.cursor/debug.log")
+    payload = {
+        "id": f"log_config_{int(__import__('time').time()*1000)}",
+        "timestamp": int(__import__("time").time() * 1000),
+        "location": "src/config.py",
+        "message": message,
+        "data": data,
+        "runId": "pre-fix",
+        "hypothesisId": hypothesis_id,
+    }
+    try:
+        # Avoid importing json at top-level just for debug mode
+        import json as _json
 
-    if config_file.exists():
-        try:
-            content = config_file.read_text()
-        except Exception as e:
-            print(f"Warning: Could not read config file: {e}")
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        with log_path.open("a", encoding="utf-8") as f:
+            f.write(_json.dumps(payload) + "\n")
+    except Exception:
+        # Logging must never break the player
+        pass
+# endregion
 
-    if content:
-        for line in content.splitlines():
-            line = line.strip()
-            if not line or line.startswith("#") or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            os.environ[key.strip()] = value.strip()
+
+def load_config():
+    """Load configuration from config.env (static) then secrets.env (device-specific).
+
+    - config.env: API_URL, HOST_URL, etc. (in Git, shared across devices)
+    - secrets.env: DEVICE_ID, API_TOKEN (per-device secrets, not in Git)
+    - Later file overrides earlier for the same key.
+    """
+    config_path = BASE_DIR / "config.env"
+    secrets_path = BASE_DIR / "secrets.env"
+
+    # First, static config (shared)
+    print(f"[config] BASE_DIR={BASE_DIR}")
+    print(f"[config] Trying config.env at: {config_path} (exists={config_path.exists()})")
+    _load_env_file(config_path)
+    print(f"[config] After config.env, DEVICE_ID={repr(os.environ.get('DEVICE_ID'))}")
+    _debug_log(
+        "H1",
+        "After loading config.env",
+        {"has_device_id": bool(os.environ.get("DEVICE_ID"))},
+    )
+
+    # Then, device-specific secrets (override)
+    print(f"[config] Trying secrets.env at: {secrets_path} (exists={secrets_path.exists()})")
+    _load_env_file(secrets_path)
+    print(f"[config] After secrets.env, DEVICE_ID={repr(os.environ.get('DEVICE_ID'))}")
+    _debug_log(
+        "H1",
+        "After loading secrets.env",
+        {"has_device_id": bool(os.environ.get("DEVICE_ID"))},
+    )
 
     # Minimal config used by the scripts
     return {
