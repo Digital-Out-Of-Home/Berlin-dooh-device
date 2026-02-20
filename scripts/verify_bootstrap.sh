@@ -26,6 +26,7 @@ fi
 HOME_DIR="/home/$USER"
 DIR="$HOME_DIR/vlc-player"
 CONFIG_FILE="$DIR/config.env"
+SECRETS_FILE="$DIR/secrets.env"
 
 echo "=== Bootstrap Verification ==="
 echo "User: $USER"
@@ -166,33 +167,38 @@ echo ""
 
 echo "=== 3. Configuration ==="
 
+# config.env (shared, from repo)
 if [ -f "$CONFIG_FILE" ]; then
     check 0 "Config file exists: $CONFIG_FILE"
-    
-    # Parse config values reliably (handles URLs with special characters)
-    DROPBOX_URL=$(grep "^DROPBOX_URL=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    DEVICE_ID=$(grep "^DEVICE_ID=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    GITHUB_REPO_OWNER=$(grep "^GITHUB_REPO_OWNER=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-    
-    if [ -n "$DROPBOX_URL" ] && [ "$DROPBOX_URL" != "" ]; then
-        check 0 "  → DROPBOX_URL configured"
-    else
-        warn "  → DROPBOX_URL missing"
-    fi
-    
-    if [ -n "$DEVICE_ID" ] && [ "$DEVICE_ID" != "" ]; then
-        check 0 "  → DEVICE_ID configured ($DEVICE_ID)"
-    else
-        warn "  → DEVICE_ID missing"
-    fi
-    
-    if [ -n "$GITHUB_REPO_OWNER" ] && [ "$GITHUB_REPO_OWNER" != "" ]; then
-        check 0 "  → GITHUB_REPO_OWNER configured"
-    else
-        warn "  → GITHUB_REPO_OWNER missing"
-    fi
 else
     warn "Config file missing: $CONFIG_FILE"
+fi
+
+# secrets.env (device-specific, not in Git)
+if [ -f "$SECRETS_FILE" ]; then
+    check 0 "Secrets file exists: $SECRETS_FILE"
+else
+    warn "Secrets file missing: $SECRETS_FILE (copy from USB or create with DEVICE_ID, API_TOKEN)"
+fi
+
+# DEVICE_ID: secrets.env overrides config.env (same order as config.py)
+DEVICE_ID=""
+[ -f "$SECRETS_FILE" ] && DEVICE_ID=$(grep "^DEVICE_ID=" "$SECRETS_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+[ -z "$DEVICE_ID" ] && [ -f "$CONFIG_FILE" ] && DEVICE_ID=$(grep "^DEVICE_ID=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+if [ -n "$DEVICE_ID" ]; then
+    check 0 "DEVICE_ID configured ($DEVICE_ID)"
+else
+    warn "DEVICE_ID missing (set in secrets.env or config.env)"
+fi
+
+# API_TOKEN: secrets.env overrides config.env
+API_TOKEN=""
+[ -f "$SECRETS_FILE" ] && API_TOKEN=$(grep "^API_TOKEN=" "$SECRETS_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+[ -z "$API_TOKEN" ] && [ -f "$CONFIG_FILE" ] && API_TOKEN=$(grep "^API_TOKEN=" "$CONFIG_FILE" 2>/dev/null | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+if [ -n "$API_TOKEN" ]; then
+    check 0 "API_TOKEN configured"
+else
+    warn "API_TOKEN missing (required for API and scheduler; set in secrets.env)"
 fi
 
 echo ""
