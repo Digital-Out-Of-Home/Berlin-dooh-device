@@ -6,10 +6,35 @@ Forces the local repo to match origin/main and restarts services.
 Intended to be run by a systemd timer every N hours, or manually.
 """
 
+import os
 import subprocess
 from pathlib import Path
 
 from config import BASE_DIR
+
+
+def ensure_script_permissions(repo_dir: Path) -> None:
+    """
+    Re-apply executable bit to scripts after git reset (Git may not preserve it).
+    """
+    for dir_name, pattern in [("src", "*.py"), ("scripts", "*.sh")]:
+        d = repo_dir / dir_name
+        if not d.is_dir():
+            continue
+        for f in d.iterdir():
+            if f.is_file() and f.suffix == (".py" if pattern == "*.py" else ".sh"):
+                try:
+                    os.chmod(f, os.stat(f).st_mode | 0o111)
+                    print(f"+ chmod +x {f.relative_to(repo_dir)}")
+                except OSError as e:
+                    print(f"Warning: could not chmod +x {f}: {e}")
+    bootstrap = repo_dir / "bootstrap.sh"
+    if bootstrap.is_file():
+        try:
+            os.chmod(bootstrap, os.stat(bootstrap).st_mode | 0o111)
+            print("+ chmod +x bootstrap.sh")
+        except OSError as e:
+            print(f"Warning: could not chmod +x bootstrap.sh: {e}")
 
 
 def run(cmd, check: bool = True) -> int:
@@ -35,6 +60,9 @@ def update() -> None:
     # Fetch latest changes and hard reset to origin/main (forced update)
     run(["git", "-C", str(repo_dir), "fetch", "origin"])
     run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/main"])
+
+    # Re-apply executable bit to scripts (Git may not preserve it on checkout)
+    ensure_script_permissions(repo_dir)
 
     # Restart services to pick up new code
     # Adjust service names if they ever change
