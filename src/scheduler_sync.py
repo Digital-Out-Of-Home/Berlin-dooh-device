@@ -46,7 +46,7 @@ def fetch_schedule():
         sys.exit(1)
 
     base = host_url.rstrip("/")
-    url = f"{base}/api/devices/{DEVICE_ID}/"
+    url = f"{base}/api/v1/device/detail/c/{DEVICE_ID}/"
 
     print(f"[scheduler_sync] Fetching device data from: {url}")
 
