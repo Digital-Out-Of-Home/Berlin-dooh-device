@@ -67,6 +67,22 @@ else
     warn "VLC not installed"
 fi
 
+# Check cec-client (required for power control); install cec-utils if missing
+if command -v cec-client &> /dev/null; then
+    check 0 "cec-client available (cec-utils)"
+else
+    echo -e "${YELLOW}⚠${NC} cec-client not found; attempting to install cec-utils..."
+    if apt-get update -qq &>/dev/null && apt-get install -y -qq cec-utils &>/dev/null; then
+        if command -v cec-client &> /dev/null; then
+            check 0 "cec-client installed (cec-utils was missing)"
+        else
+            warn "cec-client still missing after install attempt"
+        fi
+    else
+        warn "cec-client not installed (install cec-utils for power control)"
+    fi
+fi
+
 echo ""
 
 # ============================================================================
@@ -90,6 +106,8 @@ REQUIRED_FILES=(
     "src/media_sync.py"
     "src/code_update.py"
     "src/health_check.py"
+    "src/scheduler_sync.py"
+    "src/power_control.py"
     "scripts/verify_bootstrap.sh"
     "config.env"
 )
@@ -115,8 +133,11 @@ done
 if [ -d "$DIR/systemd" ]; then
     check 0 "Systemd directory exists"
     
-    # Check systemd files
-    for file in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer"; do
+    # Check systemd files (player, maintenance, scheduler, power control, code-update)
+    for file in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer" \
+                "vlc-scheduler-sync.service" "vlc-scheduler-sync.timer" \
+                "vlc-power-control.service" "vlc-power-control.timer" \
+                "vlc-code-update.service" "vlc-code-update.timer"; do
         if [ -f "$DIR/systemd/$file" ]; then
             check 0 "Systemd file exists: $file"
         else
@@ -202,6 +223,15 @@ else
     warn "Media directory missing (media sync may have failed)"
 fi
 
+# Schedule file (warn if scheduler timer is enabled but schedule not synced yet)
+if systemctl is-enabled vlc-scheduler-sync.timer &>/dev/null 2>&1 || systemctl is-active --quiet vlc-scheduler-sync.timer 2>/dev/null; then
+    if [ -f "$DIR/media/schedule.json" ]; then
+        check 0 "Schedule file exists: schedule.json"
+    else
+        warn "Schedule file missing (scheduler sync may not have run or API may be unavailable)"
+    fi
+fi
+
 echo ""
 
 # ============================================================================
@@ -210,8 +240,11 @@ echo ""
 
 echo "=== 5. Systemd Services ==="
 
-# Check if services exist in /etc/systemd/system/
-for service in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer"; do
+# Check if services exist in /etc/systemd/system/ (player, maintenance, scheduler, power, code-update)
+for service in "vlc-player.service" "vlc-maintenance.service" "vlc-maintenance.timer" \
+               "vlc-scheduler-sync.service" "vlc-scheduler-sync.timer" \
+               "vlc-power-control.service" "vlc-power-control.timer" \
+               "vlc-code-update.service" "vlc-code-update.timer"; do
     if [ -f "/etc/systemd/system/$service" ]; then
         check 0 "Service file installed: $service"
         
@@ -248,6 +281,33 @@ elif systemctl is-enabled --quiet vlc-maintenance.timer 2>/dev/null; then
     warn "vlc-maintenance.timer enabled but not active"
 else
     warn "vlc-maintenance.timer not active"
+fi
+
+# Scheduler sync timer
+if systemctl is-active --quiet vlc-scheduler-sync.timer 2>/dev/null; then
+    check 0 "vlc-scheduler-sync.timer is active"
+elif systemctl is-enabled --quiet vlc-scheduler-sync.timer 2>/dev/null; then
+    warn "vlc-scheduler-sync.timer enabled but not active"
+else
+    warn "vlc-scheduler-sync.timer not active"
+fi
+
+# Power control timer
+if systemctl is-active --quiet vlc-power-control.timer 2>/dev/null; then
+    check 0 "vlc-power-control.timer is active"
+elif systemctl is-enabled --quiet vlc-power-control.timer 2>/dev/null; then
+    warn "vlc-power-control.timer enabled but not active"
+else
+    warn "vlc-power-control.timer not active"
+fi
+
+# Code-update timer
+if systemctl is-active --quiet vlc-code-update.timer 2>/dev/null; then
+    check 0 "vlc-code-update.timer is active"
+elif systemctl is-enabled --quiet vlc-code-update.timer 2>/dev/null; then
+    warn "vlc-code-update.timer enabled but not active"
+else
+    warn "vlc-code-update.timer not active"
 fi
 
 echo ""
