@@ -64,9 +64,8 @@ def update() -> None:
     # Re-apply executable bit to scripts (Git may not preserve it on checkout)
     ensure_script_permissions(repo_dir)
 
-    # Restart services to pick up new code
-    # Adjust service names if they ever change
-    run(["sudo", "systemctl", "restart", "vlc-player"])
+    # Restart maintenance timer so next run uses new code (media_sync, etc.)
+    # vlc-player is not restarted to avoid playback interruption; it will pick up changes on reboot
     run(["sudo", "systemctl", "restart", "vlc-maintenance.timer"])
 
     print("=== Code update complete ===")
