@@ -10,7 +10,6 @@ import datetime
 import json
 import subprocess
 import sys
-from pathlib import Path
 
 from config import BASE_DIR
 
@@ -38,6 +37,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
     if cec_device:
         base_cmd.append(cec_device)
 
+    print("base_cmd -> ", base_cmd)
     try:
         result = subprocess.run(
             base_cmd,

@@ -142,14 +142,22 @@ cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 
 # Enable only units with [Install]: main service + timers (oneshot services are triggered by timers)
+echo "Enabling service: vlc-player.service"
 systemctl enable vlc-player.service
 for f in "$DIR/systemd/"*.timer; do
-  [ -f "$f" ] && systemctl enable "$(basename "$f")"
+  if [ -f "$f" ]; then
+    echo "Enabling timer: $(basename "$f")"
+    systemctl enable "$(basename "$f")"
+  fi
 done
 # Start the long-running service and all timers
+echo "Starting service: vlc-player.service"
 systemctl start vlc-player
 for f in "$DIR/systemd/"*.timer; do
-  [ -f "$f" ] && systemctl start "$(basename "$f")"
+  if [ -f "$f" ]; then
+    echo "Starting timer: $(basename "$f")"
+    systemctl start "$(basename "$f")"
+  fi
 done
 echo "[$(date -Iseconds)] [3/3] Systemd services installed and started: OK"
 
