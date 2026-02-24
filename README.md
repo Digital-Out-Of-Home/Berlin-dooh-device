@@ -1,6 +1,6 @@
 # VLC Playlist Player
 
-Syncs media from an API (Smart Sync) and plays on loop using VLC. Designed for Raspberry Pi digital signage, but works on any Linux box with VLC or via Docker.
+Syncs media from an API (Smart Sync) and plays on loop using VLC. Designed for Raspberry Pi digital signage, but works on any Linux box with VLC.
 
 ### Configuration
 
@@ -38,18 +38,6 @@ This will:
 - Enable `vlc-player.service` and all `*.timer` units
   (maintenance, code-update, scheduler-sync, power-control)
 - Start `vlc-player` and all enabled timers
-
-### Docker Support
-
-You can run the player in a container (useful for testing or containerized deployments).
-
-1. **Build and Run**:
-   ```bash
-   docker-compose up --build -d
-   ```
-
-2. **Configuration**:
-   Pass environment variables into your docker-compose or container run command.
 
 ### Manual Installation (Alternative)
 
@@ -159,8 +147,6 @@ You can then optionally enable the 4‑hour code update timer as described above
 ```text
 ~/vlc-player/
 ├── bootstrap.sh              # Installer (run from here)
-├── Dockerfile                # Container build definition
-├── docker-compose.yml        # Container orchestration
 ├── src/
 │   ├── main.py               # VLC player script
 │   ├── media_sync.py         # Smart media sync
