@@ -92,7 +92,7 @@ if [ -d "$DIR/.git" ]; then
   cd "$DIR"
   git remote set-url origin "$REPO_URL"
   git fetch origin
-  git reset --hard origin/main
+  git reset --hard origin/test-power-schedule
   git clean -fd
 else
   echo "Cloning fresh copy..."
