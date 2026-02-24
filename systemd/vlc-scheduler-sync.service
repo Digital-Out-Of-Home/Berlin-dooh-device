@@ -8,5 +8,3 @@ Type=oneshot
 User=__USER__
 WorkingDirectory=__DIR__
 ExecStart=/usr/bin/python3 __DIR__/src/scheduler_sync.py
-EnvironmentFile=__DIR__/config.env
-

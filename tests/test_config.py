@@ -35,8 +35,7 @@ class TestConfig(unittest.TestCase):
 
     def test_load_config_defaults(self):
         """Test that load_config returns expected defaults when no config file."""
-        # Ensure we don't accidentally read a real config file by patching BASE_DIR or ensuring env vars are clear
-        # Ideally we'd patch BASE_DIR in the module, but for now assuming no config.env in test env or ignored if env vars set
+        # Ensure we don't accidentally use old test state
         
         # Clear specific env vars
         keys = ["API_URL", "API_TOKEN", "DEVICE_ID", "HOST_URL", "HEALTHCHECK_URL"]
@@ -45,9 +44,9 @@ class TestConfig(unittest.TestCase):
                 del os.environ[k]
                 
         config = load_config()
-        self.assertEqual(config["API_URL"], "http://host.docker.internal:8000/api/v1/campaign/playlist/")
-        self.assertEqual(config["HOST_URL"], "http://host.docker.internal:8000")
-        self.assertEqual(config["API_TOKEN"], "temporary_device_token_123456")
+        self.assertEqual(config["API_URL"], "http://localhost:8000/api/v1/campaign/playlist/")
+        self.assertEqual(config["HOST_URL"], "http://localhost:8000")
+        self.assertEqual(config["API_TOKEN"], "")
 
 if __name__ == "__main__":
     unittest.main()

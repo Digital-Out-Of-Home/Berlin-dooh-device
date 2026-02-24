@@ -4,9 +4,7 @@ Syncs media from an API (Smart Sync) and plays on loop using VLC. Designed for R
 
 ### Configuration
 
-Configuration is split between a shared `config.env` (checked into the repo) and a
-device-specific `secrets.env` (not in Git). Together they provide the following
-environment variables:
+Configuration is provided via the following environment variables:
 
 ```bash
 # Device Identity
@@ -20,18 +18,12 @@ HOST_URL=https://your-backend-api.com
 HEALTHCHECK_URL=https://hc-ping.com/your-uuid-here
 ```
 
-In the cloned device directory (`~/vlc-player` by default):
-
-- `config.env` lives at the **project root** (same level as `src/`).
-- `secrets.env` (on the device) can override values from `config.env` and is the
-  recommended place for `DEVICE_ID` and `API_TOKEN`.
 
 ### One-Line Install (Recommended, Raspberry Pi)
 
 On a fresh device:
 
-1. (Optional but recommended) Create a `secrets.env` file in your current directory
-   with your device-specific secrets (e.g. `DEVICE_ID`, `API_TOKEN`).
+1. Ensure environment variables (`DEVICE_ID`, `API_TOKEN`, etc.) are provided to the service processes.
 2. Run the bootstrap script:
 
 ```bash
@@ -42,9 +34,6 @@ This will:
 
 - Install required packages (`git`, `vlc`, `wlr-randr`, `raindrop`, `cec-utils`)
 - Clone/update the repo to `~/vlc-player`
-- Use the `config.env` shipped in the repo as the base configuration
-- If a `secrets.env` file exists in your current directory, copy it to
-  `~/vlc-player/secrets.env` (chmod 600) for per-device secrets
 - Install all `systemd` unit files from `systemd/`
 - Enable `vlc-player.service` and all `*.timer` units
   (maintenance, code-update, scheduler-sync, power-control)
@@ -60,12 +49,12 @@ You can run the player in a container (useful for testing or containerized deplo
    ```
 
 2. **Configuration**:
-   Create a `config.env` file in the project root before running.
+   Pass environment variables into your docker-compose or container run command.
 
 ### Manual Installation (Alternative)
 
 1. Copy the project folder (e.g. `vlc-player/`) to the device.
-2. Create `config.env` with the required variables (see Configuration above).
+2. Ensure environment variables are exposed to the user/systemd (see Configuration above).
 3. Install VLC and Git:
    ```bash
    sudo apt update && sudo apt install -y vlc git
@@ -142,7 +131,7 @@ The script will:
 - Stop existing services
 - Back up the old `~/vlc-player` to `~/vlc-player-old-<timestamp>`
 - Run the latest `bootstrap.sh` from GitHub
-- Restore `config.env` and `media/` from the backup (if present)
+- Restore `media/` from the backup (if present)
 - Restart `vlc-player` and `vlc-maintenance.timer`
 
 You can then optionally enable the 4‑hour code update timer as described above.
@@ -169,9 +158,7 @@ You can then optionally enable the 4‑hour code update timer as described above
 
 ```text
 ~/vlc-player/
-├── bootstrap.sh              # Installer (run from here; uses config.env + secrets.env)
-├── config.env                # Shared configuration (in Git)
-├── secrets.env               # Device-specific secrets (not in Git)
+├── bootstrap.sh              # Installer (run from here)
 ├── Dockerfile                # Container build definition
 ├── docker-compose.yml        # Container orchestration
 ├── src/
@@ -181,7 +168,7 @@ You can then optionally enable the 4‑hour code update timer as described above
 │   ├── code_update.py        # Git-based updater
 │   ├── scheduler_sync.py     # Schedule fetcher (device operating hours)
 │   ├── power_control.py      # HDMI-CEC power control based on schedule
-│   └── config.py             # Configuration loader (config.env + secrets.env)
+│   └── config.py             # Configuration loader
 ├── scripts/
 │   └── verify_bootstrap.sh   # Verification
 ├── media/                    # Local content cache
