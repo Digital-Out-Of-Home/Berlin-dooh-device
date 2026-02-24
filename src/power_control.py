@@ -46,7 +46,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
     try:
         result = subprocess.run(
             ["cec-client", "-s", "-d", "1"],
-            input=cmd.encode("utf-8"),
+            input=cmd,
             capture_output=not debug,
             timeout=10,
             check=False,
