@@ -104,7 +104,7 @@ def acquire_lock(force: bool) -> bool:
 def download_with_retry():
     """Download from Dropbox with single retry (with progress)."""
     if not DROPBOX_URL or not DROPBOX_URL.strip():
-        raise Exception("DROPBOX_URL is not configured in config.env")
+        raise Exception("DROPBOX_URL is not configured")
     
     for attempt in [1, 2]:
         zip_path = None

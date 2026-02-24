@@ -31,10 +31,7 @@ if [ -z "$HOME_DIR" ] || [ ! -d "$HOME_DIR" ]; then
 fi
 
 DIR="$HOME_DIR/vlc-player"
-CONFIG_FILE="$DIR/config.env"
-SECRETS_FILE="$DIR/secrets.env"
 USER_UID=$(id -u "$USER")
-
 # Track whether we changed rotation-related settings (for optional reboot)
 ROTATION_CHANGED=false
 WAYFIRE_REMOVED=false
@@ -104,27 +101,8 @@ chown -R "$USER:$USER" "$DIR"
 
 echo "[$(date -Iseconds)] [2/3] Repo clone/update: OK"
 
-# --- Config: config.env (static, from repo) + secrets.env (copy from USB) -------
-# config.env is in the repo and already in $DIR after clone; code_update will overwrite it (OK).
-# secrets.env is NOT in Git: copy from USB to $DIR after bootstrap, or from PWD if present now.
-
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "ERROR: config.env missing in $DIR (expected from repo after clone)."
-  exit 1
-fi
-echo "Static config: $CONFIG_FILE (from repo)"
-
-if [ -f "$PWD/secrets.env" ]; then
-  cp "$PWD/secrets.env" "$SECRETS_FILE"
-  chmod 600 "$SECRETS_FILE"
-  chown "$USER:$USER" "$SECRETS_FILE"
-  echo "Secrets installed from current directory: $SECRETS_FILE"
-elif [ -f "$SECRETS_FILE" ]; then
-  echo "Secrets already in place: $SECRETS_FILE"
-else
-  echo "WARNING: No secrets.env found. Copy secrets.env from USB to $DIR after bootstrap (DEVICE_ID, API_TOKEN)."
-fi
-echo "[$(date -Iseconds)] Config: OK"
+# --- Config: No longer using .env files (configured via environment variables) ---
+echo "[$(date -Iseconds)] Config: Skipped (using environment variables)"
 
 # --- Install systemd services -------------------------------------------------
 echo "[3/3] Installing systemd services..."
@@ -197,4 +175,3 @@ echo ""
 echo "=== Bootstrap Complete ==="
 echo "User:   $USER"
 echo "Dir:    $DIR"
-echo "Config: $CONFIG_FILE"
