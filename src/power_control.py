@@ -27,25 +27,31 @@ SCHEDULE_FILE = MEDIA_DIR / "schedule.json"
 # HDMI-CEC HELPERS
 # ============================================================================
 
-def set_tv_power(state: str) -> None:
-    """
-    Turn TV on or off using cec-client.
 
-    state:
-        "on"  -> send 'on 0'
-        "off" -> send 'standby 0'
-    """
+def set_tv_power(state: str, debug: bool = False) -> None:
     cmd = "on 0" if state == "on" else "standby 0"
     print(f"[power_control] Turning TV {state} (cec-client '{cmd}')")
+
+    cec_device = os.getenv("CEC_DEVICE")  # e.g. /dev/cec1
+
+    base_cmd = ["cec-client", "-s", "-d", "1"]
+    if cec_device:
+        base_cmd.append(cec_device)
+
     try:
-        subprocess.run(
-            ["cec-client", "-s", "-d", "1"],
-            input=cmd.encode("utf-8"),
-            capture_output=True,
+        result = subprocess.run(
+            base_cmd,
+            input=cmd,
+            capture_output=not debug,
             timeout=10,
             check=False,
+            text=True,
         )
-    except Exception as e:  # noqa: BLE001
+        if debug and result.returncode != 0:
+            print(f"[power_control] exit code: {result.returncode}")
+            if result.stderr:
+                print(f"[power_control] stderr: {result.stderr}")
+    except Exception as e:
         print(f"[power_control] Error setting TV power: {e}")
 
 
