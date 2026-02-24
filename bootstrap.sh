@@ -120,9 +120,9 @@ cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 
 echo "Running initial setup scripts before enabling services..."
-sudo -u "$USER" python3 "$DIR/src/media_sync.py" || true
-sudo -u "$USER" python3 "$DIR/src/scheduler_sync.py" || true
-sudo -u "$USER" python3 "$DIR/src/main.py" &
+python "$DIR/src/media_sync.py" || true
+python "$DIR/src/scheduler_sync.py" || true
+python "$DIR/src/main.py" &
 
 # Enable only units with [Install]: main service + timers (oneshot services are triggered by timers)
 echo "Enabling service: vlc-player.service"
