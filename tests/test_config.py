@@ -12,40 +12,26 @@ sys.path.append(str(Path(__file__).parent.parent / "src"))
 from config import get_device_id, load_config
 
 class TestConfig(unittest.TestCase):
-    def setUp(self):
-        # Save original environ
-        self.original_environ = dict(os.environ)
-
-    def tearDown(self):
-        # Restore original environ
-        os.environ.clear()
-        os.environ.update(self.original_environ)
-
-    def test_get_device_id_configured(self):
+    @patch('config._read_env_file')
+    def test_get_device_id_configured(self, mock_read_env):
         """Test that configured DEVICE_ID is returned."""
-        os.environ["DEVICE_ID"] = "test-device-123"
+        mock_read_env.return_value = {"DEVICE_ID": "test-device-123"}
         self.assertEqual(get_device_id(), "test-device-123")
 
-    def test_get_device_id_fallback(self):
+    @patch('config._read_env_file')
+    def test_get_device_id_fallback(self, mock_read_env):
         """Test fallback to hostname when DEVICE_ID is not set."""
-        if "DEVICE_ID" in os.environ:
-            del os.environ["DEVICE_ID"]
+        mock_read_env.return_value = {}
         expected_hostname = socket.gethostname()
         self.assertEqual(get_device_id(), expected_hostname)
 
-    def test_load_config_defaults(self):
+    @patch('config._read_env_file')
+    def test_load_config_defaults(self, mock_read_env):
         """Test that load_config returns expected defaults when no config file."""
-        # Ensure we don't accidentally use old test state
-        
-        # Clear specific env vars
-        keys = ["API_URL", "API_TOKEN", "DEVICE_ID", "HOST_URL", "HEALTHCHECK_URL"]
-        for k in keys:
-            if k in os.environ:
-                del os.environ[k]
-                
+        mock_read_env.return_value = {}
         config = load_config()
-        self.assertEqual(config["API_URL"], "http://localhost:8000/api/v1/campaign/playlist/")
-        self.assertEqual(config["HOST_URL"], "http://localhost:8000")
+        self.assertEqual(config["API_URL"], "https://piapi.speakinprivate.com/api/v1/campaign/playlist/")
+        self.assertEqual(config["HOST_URL"], "https://piapi.speakinprivate.com")
         self.assertEqual(config["API_TOKEN"], "")
 
 if __name__ == "__main__":

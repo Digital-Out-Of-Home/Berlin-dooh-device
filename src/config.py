@@ -12,31 +12,53 @@ from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandle
 # ============================================================================
 
 BASE_DIR = Path(__file__).parent.parent
+CONFIG_FILE = "/home/config.env"
 
 # ============================================================================
 # CONFIGURATION FUNCTIONS
 # ============================================================================
 
 
+def _read_env_file(filepath):
+    """Read a simple .env file without external dependencies."""
+    config = {}
+    try:
+        with open(filepath, 'r') as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith('#'):
+                    continue
+                if '=' in line:
+                    key, value = line.split('=', 1)
+                    key = key.strip()
+                    value = value.strip().strip('"\'')
+                    config[key] = value
+    except FileNotFoundError:
+        pass
+    return config
+
+
 def load_config():
-    """Load configuration directly from environment variables."""
+    """Load configuration directly from /home/config.env."""
+    env_config = _read_env_file(CONFIG_FILE)
     # Minimal config used by the scripts
     return {
-        "API_URL": os.environ.get("API_URL", "https://piapi.speakinprivate.com/api/v1/campaign/playlist/"),
-        "API_TOKEN": os.environ.get("API_TOKEN", ""),
-        "DEVICE_ID": os.environ.get("DEVICE_ID", ""),
-        "HOST_URL": os.environ.get("HOST_URL", "https://piapi.speakinprivate.com"),
-        "HEALTHCHECK_URL": os.environ.get("HEALTHCHECK_URL", ""),
+        "API_URL": env_config.get("API_URL", "https://piapi.speakinprivate.com/api/v1/campaign/playlist/"),
+        "API_TOKEN": env_config.get("API_TOKEN", ""),
+        "DEVICE_ID": env_config.get("DEVICE_ID", ""),
+        "HOST_URL": env_config.get("HOST_URL", "https://piapi.speakinprivate.com"),
+        "HEALTHCHECK_URL": env_config.get("HEALTHCHECK_URL", ""),
     }
 
 
 def get_device_id():
-    """Get device ID from config or fall back to hostname.
+    """Get device ID from /home/config.env or fall back to hostname.
     
     Returns:
         str: Device ID from config, or hostname if not configured.
     """
-    device_id = os.environ.get("DEVICE_ID", "")
+    env_config = _read_env_file(CONFIG_FILE)
+    device_id = env_config.get("DEVICE_ID", "")
     return device_id if device_id else socket.gethostname()
 
 

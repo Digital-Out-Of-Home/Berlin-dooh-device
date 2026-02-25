@@ -23,11 +23,12 @@ HEALTHCHECK_URL=https://hc-ping.com/your-uuid-here
 
 On a fresh device:
 
-1. Ensure environment variables (`DEVICE_ID`, `API_TOKEN`, etc.) are provided to the service processes.
+1. Ensure environment variables (`DEVICE_ID`, `API_TOKEN`, etc.) are provided. 
+   *(Note: Export them in your terminal beforehand and use `sudo -E` to preserve them during bootstrap, or place them globally in `/etc/environment`)*
 2. Run the bootstrap script:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo bash
+curl -sSL https://raw.githubusercontent.com/Digital-Out-Of-Home/Berlin-dooh-device/main/bootstrap.sh | sudo -E bash
 ```
 
 This will:
