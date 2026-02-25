@@ -120,9 +120,16 @@ cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 
 echo "Running initial setup scripts before enabling services..."
-python "$DIR/src/media_sync.py" || true
-python "$DIR/src/scheduler_sync.py" || true
-python "$DIR/src/main.py" &
+
+# Load environment variables if they are set system-wide
+if [ -f /etc/environment ]; then
+  set -a; source /etc/environment; set +a
+fi
+
+# Run the python scripts as $USER but preserve the environment variables (-E)
+sudo -E -u "$USER" python3 "$DIR/src/media_sync.py" || true
+sudo -E -u "$USER" python3 "$DIR/src/scheduler_sync.py" || true
+sudo -E -u "$USER" python3 "$DIR/src/main.py" &
 
 # Enable only units with [Install]: main service + timers (oneshot services are triggered by timers)
 echo "Enabling service: vlc-player.service"
