@@ -165,7 +165,7 @@ def decide_power_state(schedule) -> bool:
 def main() -> None:
     schedule = load_schedule()
     should_be_on = decide_power_state(schedule)
-    set_tv_power("on" if should_be_on else "off")
+    set_tv_power("on" if should_be_on else "off", debug=True)
 
 
 if __name__ == "__main__":
