@@ -5,6 +5,10 @@ Power Control Script
 Reads the local schedule JSON and turns the TV on or off using HDMI-CEC
 (`cec-client`). Intended to be run periodically via systemd timer.
 Logs only when state changes or on error to reduce log volume.
+
+Usage:
+  python3 src/power_control.py           # normal (quiet unless state change)
+  python3 src/power_control.py --debug    # verbose: schedule decision, cec-client, etc.
 """
 
 import datetime
@@ -16,6 +20,11 @@ from pathlib import Path
 from typing import Optional
 
 from config import BASE_DIR, setup_logging
+
+# --debug: enable DEBUG logging and show cec-client output in terminal
+if "--debug" in sys.argv:
+    sys.argv.remove("--debug")
+    os.environ["LOG_LEVEL"] = "DEBUG"
 
 setup_logging()
 import logging
