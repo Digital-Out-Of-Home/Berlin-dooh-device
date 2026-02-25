@@ -80,7 +80,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
 def load_schedule():
     """Load schedule from local JSON file."""
     if not SCHEDULE_FILE.exists():
-        logger.debug("No schedule file found; skipping power control.")
+        logger.info("[power_control] No schedule file found; skipping power control.")
         return None
     try:
         with SCHEDULE_FILE.open("r", encoding="utf-8") as f:
@@ -167,8 +167,8 @@ def decide_power_state(schedule) -> bool:
         )
         should_be_on = False
 
-    logger.debug(
-        "Schedule decision: %s (day=%s, time=%s)",
+    logger.info(
+        "[power_control] Schedule decision: %s (day=%s, time=%s)",
         "ON" if should_be_on else "OFF",
         current_day_int,
         current_time.strftime("%H:%M:%S"),
@@ -181,7 +181,7 @@ def main() -> None:
     should_be_on = decide_power_state(schedule)
     desired = "on" if should_be_on else "off"
 
-    logger.info("Turning TV %s", desired)
+    logger.info("[power_control] Turning TV %s", desired)
     set_tv_power(desired, debug=logger.isEnabledFor(logging.DEBUG))
 
 
