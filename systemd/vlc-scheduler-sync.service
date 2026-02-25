@@ -7,4 +7,5 @@ Wants=network-online.target
 Type=oneshot
 User=__USER__
 WorkingDirectory=__DIR__
-ExecStart=/usr/bin/python3 __DIR__/src/scheduler_sync.py
+ExecStartPre=/bin/mkdir -p __DIR__/logs
+ExecStart=/bin/bash -c '/usr/bin/python3 __DIR__/src/scheduler_sync.py > __DIR__/logs/vlc-scheduler-sync-$(date +%%Y-%%m-%%d_%%H-%%M-%%S).log 2>&1'
