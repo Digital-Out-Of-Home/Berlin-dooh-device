@@ -83,7 +83,7 @@ echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 echo "[2/3] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
-BRANCH_NAME="test-power-schedule"
+BRANCH_NAME="main"
 
 if [ -d "$DIR/.git" ]; then
   echo "Repo already exists, updating..."

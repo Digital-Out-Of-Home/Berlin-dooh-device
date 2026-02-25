@@ -59,7 +59,7 @@ def update() -> None:
 
     # Fetch latest changes and hard reset to origin/main (forced update)
     run(["git", "-C", str(repo_dir), "fetch", "origin"])
-    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/test-power-schedule"])
+    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/main"])
 
     # Re-apply executable bit to scripts (Git may not preserve it on checkout)
     ensure_script_permissions(repo_dir)
