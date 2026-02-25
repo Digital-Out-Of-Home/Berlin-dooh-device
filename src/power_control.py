@@ -10,7 +10,7 @@ import datetime
 import json
 import subprocess
 import sys
-
+import os
 from config import BASE_DIR
 
 
@@ -31,7 +31,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
     cmd = "on 0" if state == "on" else "standby 0"
     print(f"[power_control] Turning TV {state} (cec-client '{cmd}')")
 
-    cec_device = os.getenv("CEC_DEVICE")  # e.g. /dev/cec1
+    cec_device = os.getenv("CEC_DEVICE", "/dev/cec1")
 
     base_cmd = ["cec-client", "-s", "-d", "1"]
     if cec_device:
