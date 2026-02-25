@@ -48,7 +48,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
     cmd = "on 0" if state == "on" else "standby 0"
     logger.debug("cec-client cmd: %s", cmd)
 
-    cec_device = os.getenv("CEC_DEVICE", "/dev/cec1")
+    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
     base_cmd = ["cec-client", "-s", "-d", "1"]
     if cec_device:
         base_cmd.append(cec_device)
