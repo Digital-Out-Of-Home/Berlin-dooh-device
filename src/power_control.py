@@ -57,7 +57,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
     try:
         result = subprocess.run(
             base_cmd,
-            input=cmd,
+            input=cmd + "\n",
             capture_output=not debug,
             timeout=10,
             check=False,
