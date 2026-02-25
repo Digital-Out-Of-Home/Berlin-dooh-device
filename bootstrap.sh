@@ -31,10 +31,7 @@ if [ -z "$HOME_DIR" ] || [ ! -d "$HOME_DIR" ]; then
 fi
 
 DIR="$HOME_DIR/vlc-player"
-CONFIG_FILE="$DIR/config.env"
-SECRETS_FILE="$DIR/secrets.env"
 USER_UID=$(id -u "$USER")
-
 # Track whether we changed rotation-related settings (for optional reboot)
 ROTATION_CHANGED=false
 WAYFIRE_REMOVED=false
@@ -86,17 +83,18 @@ echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 echo "[2/3] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
+BRANCH_NAME="main"
 
 if [ -d "$DIR/.git" ]; then
   echo "Repo already exists, updating..."
   cd "$DIR"
   git remote set-url origin "$REPO_URL"
   git fetch origin
-  git reset --hard origin/main
+  git reset --hard "origin/$BRANCH_NAME"
   git clean -fd
 else
   echo "Cloning fresh copy..."
-  sudo -u "$USER" git clone "$REPO_URL" "$DIR"
+  sudo -u "$USER" git clone -b "$BRANCH_NAME" "$REPO_URL" "$DIR"
   cd "$DIR"
 fi
 
@@ -104,27 +102,8 @@ chown -R "$USER:$USER" "$DIR"
 
 echo "[$(date -Iseconds)] [2/3] Repo clone/update: OK"
 
-# --- Config: config.env (static, from repo) + secrets.env (copy from USB) -------
-# config.env is in the repo and already in $DIR after clone; code_update will overwrite it (OK).
-# secrets.env is NOT in Git: copy from USB to $DIR after bootstrap, or from PWD if present now.
-
-if [ ! -f "$CONFIG_FILE" ]; then
-  echo "ERROR: config.env missing in $DIR (expected from repo after clone)."
-  exit 1
-fi
-echo "Static config: $CONFIG_FILE (from repo)"
-
-if [ -f "$PWD/secrets.env" ]; then
-  cp "$PWD/secrets.env" "$SECRETS_FILE"
-  chmod 600 "$SECRETS_FILE"
-  chown "$USER:$USER" "$SECRETS_FILE"
-  echo "Secrets installed from current directory: $SECRETS_FILE"
-elif [ -f "$SECRETS_FILE" ]; then
-  echo "Secrets already in place: $SECRETS_FILE"
-else
-  echo "WARNING: No secrets.env found. Copy secrets.env from USB to $DIR after bootstrap (DEVICE_ID, API_TOKEN)."
-fi
-echo "[$(date -Iseconds)] Config: OK"
+# --- Config: No longer using .env files (configured via environment variables) ---
+echo "[$(date -Iseconds)] Config: Skipped (using environment variables)"
 
 # --- Install systemd services -------------------------------------------------
 echo "[3/3] Installing systemd services..."
@@ -141,15 +120,35 @@ done
 cp "$DIR/systemd/"*.service "$DIR/systemd/"*.timer /etc/systemd/system/
 systemctl daemon-reload
 
+echo "Running initial setup scripts before enabling services..."
+
+# Load environment variables if they are set system-wide
+if [ -f /etc/environment ]; then
+  set -a; source /etc/environment; set +a
+fi
+
+# Run the python scripts as $USER but preserve the environment variables (-E)
+sudo -E -u "$USER" python3 "$DIR/src/media_sync.py" || true
+sudo -E -u "$USER" python3 "$DIR/src/scheduler_sync.py" || true
+sudo -E -u "$USER" python3 "$DIR/src/main.py" &
+
 # Enable only units with [Install]: main service + timers (oneshot services are triggered by timers)
+echo "Enabling service: vlc-player.service"
 systemctl enable vlc-player.service
 for f in "$DIR/systemd/"*.timer; do
-  [ -f "$f" ] && systemctl enable "$(basename "$f")"
+  if [ -f "$f" ]; then
+    echo "Enabling timer: $(basename "$f")"
+    systemctl enable "$(basename "$f")"
+  fi
 done
 # Start the long-running service and all timers
+echo "Starting service: vlc-player.service"
 systemctl start vlc-player
 for f in "$DIR/systemd/"*.timer; do
-  [ -f "$f" ] && systemctl start "$(basename "$f")"
+  if [ -f "$f" ]; then
+    echo "Starting timer: $(basename "$f")"
+    systemctl start "$(basename "$f")"
+  fi
 done
 echo "[$(date -Iseconds)] [3/3] Systemd services installed and started: OK"
 
@@ -189,4 +188,3 @@ echo ""
 echo "=== Bootstrap Complete ==="
 echo "User:   $USER"
 echo "Dir:    $DIR"
-echo "Config: $CONFIG_FILE"
