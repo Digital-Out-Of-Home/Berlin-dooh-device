@@ -12,7 +12,7 @@ from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandle
 # ============================================================================
 
 BASE_DIR = Path(__file__).parent.parent
-CONFIG_FILE = "/home/config.env"
+CONFIG_FILE = "/home/pi/config.env"
 
 # ============================================================================
 # CONFIGURATION FUNCTIONS
@@ -39,7 +39,7 @@ def _read_env_file(filepath):
 
 
 def load_config():
-    """Load configuration directly from /home/config.env."""
+    """Load configuration directly from /home/pi/config.env."""
     env_config = _read_env_file(CONFIG_FILE)
     # Minimal config used by the scripts
     return {
@@ -52,7 +52,7 @@ def load_config():
 
 
 def get_device_id():
-    """Get device ID from /home/config.env or fall back to hostname.
+    """Get device ID from /home/pi/config.env or fall back to hostname.
     
     Returns:
         str: Device ID from config, or hostname if not configured.
