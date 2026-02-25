@@ -6,4 +6,5 @@ After=network.target
 Type=oneshot
 User=__USER__
 WorkingDirectory=__DIR__
-ExecStart=/usr/bin/python3 __DIR__/src/power_control.py
+ExecStartPre=/bin/mkdir -p __DIR__/logs
+ExecStart=/bin/bash -c '/usr/bin/python3 __DIR__/src/power_control.py > __DIR__/logs/vlc-power-control-$(date +%%Y-%%m-%%d_%%H-%%M-%%S).log 2>&1'
