@@ -83,17 +83,18 @@ echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 echo "[2/3] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
+BRANCH_NAME="test-power-schedule"
 
 if [ -d "$DIR/.git" ]; then
   echo "Repo already exists, updating..."
   cd "$DIR"
   git remote set-url origin "$REPO_URL"
   git fetch origin
-  git reset --hard origin/test-power-schedule
+  git reset --hard "origin/$BRANCH_NAME"
   git clean -fd
 else
   echo "Cloning fresh copy..."
-  sudo -u "$USER" git clone "$REPO_URL" "$DIR"
+  sudo -u "$USER" git clone -b "$BRANCH_NAME" "$REPO_URL" "$DIR"
   cd "$DIR"
 fi
 
