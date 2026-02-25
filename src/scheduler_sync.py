@@ -8,12 +8,16 @@ whether the display should be on or off at a given time.
 """
 
 import json
+import logging
 import sys
 from pathlib import Path
 from urllib.request import Request, urlopen
 from urllib.error import URLError, HTTPError
 
-from config import BASE_DIR, load_config, get_device_id
+from config import BASE_DIR, load_config, get_device_id, setup_logging
+
+setup_logging()
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -42,13 +46,12 @@ def fetch_schedule():
     """
     host_url = config.get("HOST_URL")
     if not host_url:
-        print("Error: HOST_URL is not configured.")
+        logger.error("HOST_URL is not configured.")
         sys.exit(1)
 
     base = host_url.rstrip("/")
     url = f"{base}/api/v1/device/detail/c/{DEVICE_ID}/"
-
-    print(f"[scheduler_sync] Fetching device data from: {url}")
+    logger.debug("Fetching device data from: %s", url)
 
     headers = {
         "User-Agent": "Berlin-DOOH-Device/1.0",
@@ -63,19 +66,18 @@ def fetch_schedule():
     try:
         with urlopen(req, timeout=30) as response:
             if response.status != 200:
-                print(f"[scheduler_sync] Error: API returned status {response.status}")
+                logger.error("API returned status %s", response.status)
                 sys.exit(1)
             data = response.read()
             device_data = json.loads(data)
-
             schedules = device_data.get("schedules", [])
             return schedules
 
     except (HTTPError, URLError) as e:
-        print(f"[scheduler_sync] Error fetching device data: {e}")
+        logger.error("Fetching device data failed: %s", e)
         sys.exit(1)
     except json.JSONDecodeError:
-        print("[scheduler_sync] Error: Failed to decode API response JSON")
+        logger.error("Failed to decode API response JSON")
         sys.exit(1)
 
 
@@ -85,20 +87,19 @@ def save_schedule(schedule_data):
     try:
         with SCHEDULE_FILE.open("w", encoding="utf-8") as f:
             json.dump(schedule_data, f, indent=2)
-        print(f"[scheduler_sync] Schedule saved to {SCHEDULE_FILE}")
+        logger.info("Schedule saved to %s", SCHEDULE_FILE)
     except OSError as e:
-        print(f"[scheduler_sync] Error saving schedule file: {e}")
+        logger.error("Error saving schedule file: %s", e)
 
 
 def main():
-    print("=== Schedule Sync ===")
+    logger.debug("Schedule sync starting")
     schedule_data = fetch_schedule()
     if schedule_data:
         save_schedule(schedule_data)
     else:
-        print("[scheduler_sync] No schedule data received.")
+        logger.warning("No schedule data received.")
 
 
 if __name__ == "__main__":
     main()
-

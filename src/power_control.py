@@ -4,6 +4,7 @@ Power Control Script
 
 Reads the local schedule JSON and turns the TV on or off using HDMI-CEC
 (`cec-client`). Intended to be run periodically via systemd timer.
+Logs only when state changes or on error to reduce log volume.
 """
 
 import datetime
@@ -11,7 +12,14 @@ import json
 import subprocess
 import sys
 import os
-from config import BASE_DIR
+from pathlib import Path
+from typing import Optional
+
+from config import BASE_DIR, setup_logging
+
+setup_logging()
+import logging
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -20,6 +28,7 @@ from config import BASE_DIR
 
 MEDIA_DIR = BASE_DIR / "media"
 SCHEDULE_FILE = MEDIA_DIR / "schedule.json"
+POWER_STATE_FILE = MEDIA_DIR / ".power_state"
 
 
 # ============================================================================
@@ -29,15 +38,14 @@ SCHEDULE_FILE = MEDIA_DIR / "schedule.json"
 
 def set_tv_power(state: str, debug: bool = False) -> None:
     cmd = "on 0" if state == "on" else "standby 0"
-    print(f"[power_control] Turning TV {state} (cec-client '{cmd}')")
+    logger.debug("cec-client cmd: %s", cmd)
 
     cec_device = os.getenv("CEC_DEVICE", "/dev/cec1")
-
     base_cmd = ["cec-client", "-s", "-d", "1"]
     if cec_device:
         base_cmd.append(cec_device)
+    logger.debug("base_cmd: %s", base_cmd)
 
-    print("base_cmd -> ", base_cmd)
     try:
         result = subprocess.run(
             base_cmd,
@@ -47,12 +55,34 @@ def set_tv_power(state: str, debug: bool = False) -> None:
             check=False,
             text=True,
         )
-        if debug and result.returncode != 0:
-            print(f"[power_control] exit code: {result.returncode}")
-            if result.stderr:
-                print(f"[power_control] stderr: {result.stderr}")
+        if result.returncode != 0:
+            logger.warning(
+                "cec-client exit code %s%s",
+                result.returncode,
+                f" stderr: {result.stderr}" if result.stderr else "",
+            )
     except Exception as e:
-        print(f"[power_control] Error setting TV power: {e}")
+        logger.error("Error setting TV power: %s", e)
+
+
+def read_last_power_state() -> Optional[str]:
+    """Return last applied state: 'on', 'off', or None if unknown."""
+    if not POWER_STATE_FILE.exists():
+        return None
+    try:
+        s = POWER_STATE_FILE.read_text().strip().lower()
+        return s if s in ("on", "off") else None
+    except Exception:
+        return None
+
+
+def write_power_state(state: str) -> None:
+    """Persist applied state for next run."""
+    try:
+        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+        POWER_STATE_FILE.write_text(state)
+    except OSError as e:
+        logger.debug("Could not write power state file: %s", e)
 
 
 # ============================================================================
@@ -62,13 +92,13 @@ def set_tv_power(state: str, debug: bool = False) -> None:
 def load_schedule():
     """Load schedule from local JSON file."""
     if not SCHEDULE_FILE.exists():
-        print("[power_control] No schedule file found; skipping power control.")
+        logger.debug("No schedule file found; skipping power control.")
         return None
     try:
         with SCHEDULE_FILE.open("r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception as e:  # noqa: BLE001
-        print(f"[power_control] Error loading schedule: {e}")
+    except Exception as e:
+        logger.warning("Error loading schedule: %s", e)
         return None
 
 
@@ -97,15 +127,14 @@ def decide_power_state(schedule) -> bool:
     ]
     """
     if not schedule:
-        print("[power_control] Empty or missing schedule; leaving state unchanged.")
+        logger.debug("Empty or missing schedule; leaving state unchanged.")
         return False
 
     if not isinstance(schedule, list):
-        print("[power_control] Invalid schedule format (expected list).")
+        logger.warning("Invalid schedule format (expected list).")
         return False
 
     now = datetime.datetime.now()
-    # Python weekday: 0=Mon..6=Sun; API: 1=Mon..7=Sun
     current_day_int = now.weekday() + 1
     current_time = now.time()
 
@@ -129,43 +158,49 @@ def decide_power_state(schedule) -> bool:
             start_time = parse_api_time(start_str)
             end_time = parse_api_time(end_str)
         except ValueError as e:
-            print(f"[power_control] Error parsing time for day {item_day}: {e}")
+            logger.warning("Error parsing time for day %s: %s", item_day, e)
             continue
 
         rule_found = True
 
         if start_time <= end_time:
-            # Same-day window, e.g. 07:00–23:00
             if start_time <= current_time <= end_time:
                 should_be_on = True
         else:
-            # Overnight window, e.g. 23:00–06:00
             if start_time <= current_time or current_time <= end_time:
                 should_be_on = True
 
-        # Only one rule per day is expected; stop after first matching entry
         break
 
     if not rule_found:
-        print(
-            f"[power_control] No active schedule found for today "
-            f"(day={current_day_int}); defaulting to OFF.",
+        logger.debug(
+            "No active schedule for today (day=%s); defaulting to OFF.",
+            current_day_int,
         )
         should_be_on = False
 
-    state_str = "ON" if should_be_on else "OFF"
-    print(
-        f"[power_control] Schedule decision: {state_str} "
-        f"(day={current_day_int}, time={current_time.strftime('%H:%M:%S')})",
+    logger.debug(
+        "Schedule decision: %s (day=%s, time=%s)",
+        "ON" if should_be_on else "OFF",
+        current_day_int,
+        current_time.strftime("%H:%M:%S"),
     )
-
     return should_be_on
 
 
 def main() -> None:
     schedule = load_schedule()
     should_be_on = decide_power_state(schedule)
-    set_tv_power("on" if should_be_on else "off", debug=True)
+    desired = "on" if should_be_on else "off"
+    last = read_last_power_state()
+
+    if last == desired:
+        logger.debug("TV already %s; no change.", desired)
+        return
+
+    logger.info("Turning TV %s (was %s)", desired, last or "unknown")
+    set_tv_power(desired, debug=logger.isEnabledFor(logging.DEBUG))
+    write_power_state(desired)
 
 
 if __name__ == "__main__":
@@ -173,4 +208,3 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         sys.exit(1)
-

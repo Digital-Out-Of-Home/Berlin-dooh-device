@@ -7,7 +7,6 @@ After=network-online.target
 Type=oneshot
 User=__USER__
 WorkingDirectory=__DIR__
-ExecStartPre=/bin/mkdir -p __DIR__/logs
-ExecStart=/bin/bash -c '/usr/bin/python3 __DIR__/src/code_update.py > __DIR__/logs/vlc-code-update-$(date +%%Y-%%m-%%d_%%H-%%M-%%S).log 2>&1'
-
-
+StandardOutput=journal
+StandardError=journal
+ExecStart=/usr/bin/python3 __DIR__/src/code_update.py

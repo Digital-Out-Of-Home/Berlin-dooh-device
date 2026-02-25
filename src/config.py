@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Shared configuration utilities for VLC Player scripts."""
 
+import logging
 import os
 import socket
 from pathlib import Path
@@ -13,6 +14,33 @@ from urllib.request import build_opener, HTTPCookieProcessor, HTTPRedirectHandle
 
 BASE_DIR = Path(__file__).parent.parent
 CONFIG_FILE = "/home/pi/config.env"
+
+# ============================================================================
+# LOGGING
+# ============================================================================
+
+_logging_configured = False
+
+
+def get_log_level():
+    """Return log level: DEBUG if VLC_DEBUG=1, else LOG_LEVEL env or INFO."""
+    if os.environ.get("VLC_DEBUG"):
+        return logging.DEBUG
+    level_name = (os.environ.get("LOG_LEVEL") or "INFO").upper()
+    return getattr(logging, level_name, logging.INFO)
+
+
+def setup_logging():
+    """Configure root logger once. Call from main script entry points."""
+    global _logging_configured
+    if _logging_configured:
+        return
+    logging.basicConfig(
+        level=get_log_level(),
+        format="%(levelname)s: %(message)s",
+    )
+    _logging_configured = True
+
 
 # ============================================================================
 # CONFIGURATION FUNCTIONS

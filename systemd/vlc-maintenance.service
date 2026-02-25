@@ -7,6 +7,6 @@ Wants=network-online.target
 Type=oneshot
 User=__USER__
 WorkingDirectory=__DIR__
-ExecStartPre=/bin/mkdir -p __DIR__/logs
-ExecStart=/bin/bash -c '(/usr/bin/python3 __DIR__/src/media_sync.py; /usr/bin/python3 __DIR__/src/code_update.py) > __DIR__/logs/vlc-maintenance-$(date +%%Y-%%m-%%d_%%H-%%M-%%S).log 2>&1'
-
+StandardOutput=journal
+StandardError=journal
+ExecStart=/bin/bash -c '/usr/bin/python3 __DIR__/src/media_sync.py; /usr/bin/python3 __DIR__/src/code_update.py'
