@@ -4,11 +4,12 @@ Power Control Script
 
 Reads the local schedule JSON and turns the TV on or off using HDMI-CEC
 (`cec-client`). Intended to be run periodically via systemd timer.
-Logs only when state changes or on error to reduce log volume.
+Sends the CEC command every run (no stored state), so the display stays in sync
+with the schedule even if turned on/off manually.
 
 Usage:
-  python3 src/power_control.py           # normal (quiet unless state change)
-  python3 src/power_control.py --debug    # verbose: schedule decision, cec-client, etc.
+  python3 src/power_control.py           # normal (one INFO line per run)
+  python3 src/power_control.py --debug   # verbose: schedule decision, cec-client, etc.
 """
 
 import datetime
@@ -17,7 +18,6 @@ import subprocess
 import sys
 import os
 from pathlib import Path
-from typing import Optional
 
 from config import BASE_DIR, setup_logging
 
@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 MEDIA_DIR = BASE_DIR / "media"
 SCHEDULE_FILE = MEDIA_DIR / "schedule.json"
-POWER_STATE_FILE = MEDIA_DIR / ".power_state"
 
 
 # ============================================================================
@@ -72,26 +71,6 @@ def set_tv_power(state: str, debug: bool = False) -> None:
             )
     except Exception as e:
         logger.error("Error setting TV power: %s", e)
-
-
-def read_last_power_state() -> Optional[str]:
-    """Return last applied state: 'on', 'off', or None if unknown."""
-    if not POWER_STATE_FILE.exists():
-        return None
-    try:
-        s = POWER_STATE_FILE.read_text().strip().lower()
-        return s if s in ("on", "off") else None
-    except Exception:
-        return None
-
-
-def write_power_state(state: str) -> None:
-    """Persist applied state for next run."""
-    try:
-        MEDIA_DIR.mkdir(parents=True, exist_ok=True)
-        POWER_STATE_FILE.write_text(state)
-    except OSError as e:
-        logger.debug("Could not write power state file: %s", e)
 
 
 # ============================================================================
@@ -201,15 +180,9 @@ def main() -> None:
     schedule = load_schedule()
     should_be_on = decide_power_state(schedule)
     desired = "on" if should_be_on else "off"
-    last = read_last_power_state()
 
-    if last == desired:
-        logger.debug("TV already %s; no change.", desired)
-        return
-
-    logger.info("Turning TV %s (was %s)", desired, last or "unknown")
+    logger.info("Turning TV %s", desired)
     set_tv_power(desired, debug=logger.isEnabledFor(logging.DEBUG))
-    write_power_state(desired)
 
 
 if __name__ == "__main__":
