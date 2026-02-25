@@ -34,7 +34,7 @@ def update() -> None:
 
     # Fetch latest changes and hard reset to origin/main (forced update)
     run(["git", "-C", str(repo_dir), "fetch", "origin"])
-    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/main"])
+    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/test-power-schedule"])
 
     # Restart services to pick up new code
     # Adjust service names if they ever change
