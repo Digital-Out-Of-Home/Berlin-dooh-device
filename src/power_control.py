@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                #!/usr/bin/env python3
 """
 Power Control Script
 
@@ -178,6 +178,9 @@ def decide_power_state(schedule) -> bool:
 
 def main() -> None:
     schedule = load_schedule()
+    if schedule is None:
+        # No schedule available; leave TV state unchanged.
+        return
     should_be_on = decide_power_state(schedule)
     desired = "on" if should_be_on else "off"
 
