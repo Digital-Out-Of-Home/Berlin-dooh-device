@@ -74,6 +74,94 @@ def set_tv_power(state: str, debug: bool = False) -> None:
 
 
 # ============================================================================
+# TV STATE HELPERS
+# ============================================================================
+
+
+def get_tv_power_state() -> str | None:
+    """Best-effort query of TV power state via CEC.
+
+    Returns:
+        "on", "standby", or None if unknown/error.
+    """
+    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
+    base_cmd = ["cec-client", "-s", "-d", "1"]
+    if cec_device:
+        base_cmd.append(cec_device)
+
+    try:
+        result = subprocess.run(
+            base_cmd,
+            input="pow 0\n",
+            capture_output=True,
+            timeout=5,
+            check=False,
+            text=True,
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("[power_control] Failed to query TV power state: %s", e)
+        return None
+
+    if result.returncode != 0:
+        logger.warning(
+            "[power_control] pow 0 failed (exit %s): %s",
+            result.returncode,
+            result.stderr,
+        )
+        return None
+
+    stdout = result.stdout or ""
+    for line in stdout.splitlines():
+        lower = line.strip().lower()
+        if "power status" in lower:
+            if "standby" in lower:
+                return "standby"
+            if "on" in lower:
+                return "on"
+
+    logger.debug(
+        "[power_control] Could not parse TV power state from pow 0 output.",
+    )
+    return None
+
+
+def wake_tv_aggressive(debug: bool = False) -> None:
+    """Wake TV using a stronger CEC sequence for stubborn devices.
+
+    Sequence:
+      - on 0        (Power On)
+      - tx 10:04    (Image View On)
+      - as          (Active Source)
+    """
+    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
+    base_cmd = ["cec-client", "-s", "-d", "1"]
+    if cec_device:
+        base_cmd.append(cec_device)
+
+    sequence = "on 0\ntx 10:04\nas\n"
+    logger.debug(
+        "[power_control] Aggressive wake via cec-client: %s", base_cmd,
+    )
+    try:
+        result = subprocess.run(
+            base_cmd,
+            input=sequence,
+            capture_output=not debug,
+            timeout=10,
+            check=False,
+            text=True,
+        )
+        if result.returncode != 0:
+            logger.warning(
+                "[power_control] Aggressive wake exit code %s%s",
+                result.returncode,
+                f" stderr: {result.stderr}" if result.stderr else "",
+            )
+    except Exception as e:  # noqa: BLE001
+        logger.error("[power_control] Error during aggressive wake: %s", e)
+
+
+# ============================================================================
 # SCHEDULE HELPERS
 # ============================================================================
 
@@ -182,10 +270,41 @@ def main() -> None:
         # No schedule available; leave TV state unchanged.
         return
     should_be_on = decide_power_state(schedule)
-    desired = "on" if should_be_on else "off"
+    desired_label = "ON" if should_be_on else "OFF"
 
-    logger.info("[power_control] Turning TV %s", desired)
-    set_tv_power(desired, debug=logger.isEnabledFor(logging.DEBUG))
+    actual_state = get_tv_power_state()
+    logger.info(
+        "[power_control] Schedule wants %s, TV reported state: %s",
+        desired_label,
+        actual_state or "unknown",
+    )
+
+    if should_be_on:
+        if actual_state == "standby":
+            logger.info(
+                "[power_control] TV in standby; sending aggressive wake sequence.",
+            )
+            wake_tv_aggressive(debug=logger.isEnabledFor(logging.DEBUG))
+        elif actual_state == "on":
+            logger.info(
+                "[power_control] TV already ON; no action taken.",
+            )
+        else:
+            logger.info(
+                "[power_control] TV state unknown; sending simple ON command.",
+            )
+            set_tv_power("on", debug=logger.isEnabledFor(logging.DEBUG))
+    else:
+        if actual_state == "on":
+            logger.info(
+                "[power_control] TV ON but schedule=OFF; turning OFF.",
+            )
+            set_tv_power("off", debug=logger.isEnabledFor(logging.DEBUG))
+        else:
+            logger.info(
+                "[power_control] Schedule=OFF and TV state %s; no action.",
+                actual_state or "unknown",
+            )
 
 
 if __name__ == "__main__":
