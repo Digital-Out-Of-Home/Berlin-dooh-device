@@ -17,7 +17,6 @@ import json
 import subprocess
 import sys
 import os
-from pathlib import Path
 
 from config import BASE_DIR, setup_logging
 
@@ -44,25 +43,66 @@ SCHEDULE_FILE = MEDIA_DIR / "schedule.json"
 # ============================================================================
 
 
+def run_cec_command_with_retry(cmd_input: str, debug: bool = False, timeout: int = 10) -> subprocess.CompletedProcess:
+    """Run CEC command with retry logic using multiple device fallbacks.
+
+    Tries CEC devices in order:
+    1. /dev/cec0 (default)
+    2. /dev/cec1
+    3. /dev/cec2
+
+    If all three fail, raises the last exception.
+
+    Args:
+        cmd_input: CEC command string to send
+        debug: Whether to show cec-client output
+        timeout: Command timeout in seconds
+
+    Returns:
+        subprocess.CompletedProcess result from successful command
+
+    Raises:
+        Exception: If all three CEC devices fail
+    """
+    # Define CEC device fallback order
+    cec_devices = ["/dev/cec0", "/dev/cec1", "/dev/cec2"]
+
+    last_exception = None
+
+    for i, cec_device in enumerate(cec_devices):
+        base_cmd = ["cec-client", "-s", "-d", "1", cec_device]
+        logger.debug("Trying CEC device %s (attempt %d/3): %s", cec_device, i+1, base_cmd)
+
+        try:
+            result = subprocess.run(
+                base_cmd,
+                input=cmd_input + "\n",
+                capture_output=not debug,
+                timeout=timeout,
+                check=False,
+                text=True,
+            )
+
+            # Consider it successful if subprocess ran (even with non-zero exit code)
+            logger.debug("CEC command succeeded with device %s", cec_device)
+            return result
+
+        except Exception as e:
+            last_exception = e
+            logger.warning("CEC device %s failed (attempt %d/3): %s", cec_device, i+1, e)
+            continue
+
+    # All devices failed, raise the last exception
+    logger.error("All CEC devices failed. Raising last exception.")
+    raise last_exception
+
+
 def set_tv_power(state: str, debug: bool = False) -> None:
     cmd = "on 0" if state == "on" else "standby 0"
     logger.debug("cec-client cmd: %s", cmd)
 
-    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
-    base_cmd = ["cec-client", "-s", "-d", "1"]
-    if cec_device:
-        base_cmd.append(cec_device)
-    logger.debug("base_cmd: %s", base_cmd)
-
     try:
-        result = subprocess.run(
-            base_cmd,
-            input=cmd + "\n",
-            capture_output=not debug,
-            timeout=10,
-            check=False,
-            text=True,
-        )
+        result = run_cec_command_with_retry(cmd, debug=debug, timeout=10)
         if result.returncode != 0:
             logger.warning(
                 "cec-client exit code %s%s",
@@ -71,6 +111,7 @@ def set_tv_power(state: str, debug: bool = False) -> None:
             )
     except Exception as e:
         logger.error("Error setting TV power: %s", e)
+        raise  # Let the code crash as requested
 
 
 # ============================================================================
@@ -84,20 +125,8 @@ def get_tv_power_state() -> str | None:
     Returns:
         "on", "standby", or None if unknown/error.
     """
-    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
-    base_cmd = ["cec-client", "-s", "-d", "1"]
-    if cec_device:
-        base_cmd.append(cec_device)
-
     try:
-        result = subprocess.run(
-            base_cmd,
-            input="pow 0\n",
-            capture_output=True,
-            timeout=5,
-            check=False,
-            text=True,
-        )
+        result = run_cec_command_with_retry("pow 0", debug=False, timeout=5)
     except Exception as e:  # noqa: BLE001
         logger.warning("[power_control] Failed to query TV power state: %s", e)
         return None
@@ -133,24 +162,11 @@ def wake_tv_aggressive(debug: bool = False) -> None:
       - tx 10:04    (Image View On)
       - as          (Active Source)
     """
-    cec_device = os.getenv("CEC_DEVICE", "/dev/cec0")
-    base_cmd = ["cec-client", "-s", "-d", "1"]
-    if cec_device:
-        base_cmd.append(cec_device)
+    sequence = "on 0\ntx 10:04\nas"
+    logger.debug("[power_control] Aggressive wake via cec-client")
 
-    sequence = "on 0\ntx 10:04\nas\n"
-    logger.debug(
-        "[power_control] Aggressive wake via cec-client: %s", base_cmd,
-    )
     try:
-        result = subprocess.run(
-            base_cmd,
-            input=sequence,
-            capture_output=not debug,
-            timeout=10,
-            check=False,
-            text=True,
-        )
+        result = run_cec_command_with_retry(sequence, debug=debug, timeout=10)
         if result.returncode != 0:
             logger.warning(
                 "[power_control] Aggressive wake exit code %s%s",
