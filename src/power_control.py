@@ -98,8 +98,13 @@ def run_cec_command_with_retry(cmd_input: str, debug: bool = False, timeout: int
 
 
 def set_tv_power(state: str, debug: bool = False) -> None:
-    cmd = "on 0" if state == "on" else "standby 0"
-    logger.debug("cec-client cmd: %s", cmd)
+    if state == "on":
+        # Power on and select HDMI port 1
+        cmd = "on 0\ntx 10:04\nas\ntx 4F:82:10:00"
+        logger.debug("cec-client cmd (with HDMI port 1 selection): %s", cmd.replace('\n', '; '))
+    else:
+        cmd = "standby 0"
+        logger.debug("cec-client cmd: %s", cmd)
 
     try:
         result = run_cec_command_with_retry(cmd, debug=debug, timeout=10)
@@ -158,12 +163,13 @@ def wake_tv_aggressive(debug: bool = False) -> None:
     """Wake TV using a stronger CEC sequence for stubborn devices.
 
     Sequence:
-      - on 0        (Power On)
-      - tx 10:04    (Image View On)
-      - as          (Active Source)
+      - on 0                  (Power On)
+      - tx 10:04              (Image View On)
+      - as                    (Active Source)
+      - tx 4F:82:10:00        (Select HDMI port 1)
     """
-    sequence = "on 0\ntx 10:04\nas"
-    logger.debug("[power_control] Aggressive wake via cec-client")
+    sequence = "on 0\ntx 10:04\nas\ntx 4F:82:10:00"
+    logger.debug("[power_control] Aggressive wake via cec-client (with HDMI port 1 selection)")
 
     try:
         result = run_cec_command_with_retry(sequence, debug=debug, timeout=10)
