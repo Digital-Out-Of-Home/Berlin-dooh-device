@@ -71,23 +71,17 @@ def load_config():
     env_config = _read_env_file(CONFIG_FILE)
     # Minimal config used by the scripts
     return {
-        "API_URL": env_config.get("API_URL", "https://piapi.speakinprivate.com/api/v1/campaign/playlist/"),
+        "API_URL": "https://piapi.speakinprivate.com/api/v1/campaign/playlist/",
         "API_TOKEN": env_config.get("API_TOKEN", ""),
-        "DEVICE_ID": env_config.get("DEVICE_ID", ""),
-        "HOST_URL": env_config.get("HOST_URL", "https://piapi.speakinprivate.com"),
-        "HEALTHCHECK_URL": env_config.get("HEALTHCHECK_URL", ""),
+        "DEVICE_ID": get_device_id(),
+        "HOST_URL": "https://piapi.speakinprivate.com",
+        "HEALTHCHECK_URL": "",
     }
 
 
 def get_device_id():
-    """Get device ID from /home/pi/config.env or fall back to hostname.
-    
-    Returns:
-        str: Device ID from config, or hostname if not configured.
-    """
-    env_config = _read_env_file(CONFIG_FILE)
-    device_id = env_config.get("DEVICE_ID", "")
-    return device_id if device_id else socket.gethostname()
+    """Get hostname as a device ID."""
+    return socket.gethostname()
 
 
 def create_http_opener():
