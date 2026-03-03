@@ -61,7 +61,7 @@ def update() -> None:
         raise SystemExit(f"Not a git repository: {repo_dir} (no .git directory)")
 
     run(["git", "-C", str(repo_dir), "fetch", "origin"])
-    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/main"])
+    run(["git", "-C", str(repo_dir), "reset", "--hard", "origin/update-vlc-player"])
 
     ensure_script_permissions(repo_dir)
 
