@@ -44,7 +44,7 @@ def play():
         "--no-mouse-events",
         "--no-keyboard-events",
         "--no-osd",
-        "--no-xlib",
+        "--vout", "drm",        # force DRM directly
         "--no-audio",
     )
 
