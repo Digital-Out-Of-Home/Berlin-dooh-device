@@ -76,8 +76,7 @@ fi
 # --- Install dependencies -----------------------------------------------------
 echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop, cec-utils)..."
 apt update
-apt install -y git vlc libvlc-dev wlr-randr raindrop cec-utils
-sudo -E -u "$USER" python3 -m pip install python-vlc
+apt install -y git vlc libvlc-dev wlr-randr raindrop cec-utils python3-python-vlc
 echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 
 # --- Clone or update repo -----------------------------------------------------
