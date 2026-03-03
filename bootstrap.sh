@@ -76,14 +76,14 @@ fi
 # --- Install dependencies -----------------------------------------------------
 echo "[1/3] Installing dependencies (git, vlc, wlr-randr, raindrop, cec-utils)..."
 apt update
-apt install -y git vlc wlr-randr raindrop cec-utils
+apt install -y git vlc libvlc-dev wlr-randr raindrop cec-utils
 echo "[$(date -Iseconds)] [1/3] Dependencies: OK"
 
 # --- Clone or update repo -----------------------------------------------------
 echo "[2/3] Fetching code from GitHub..."
 
 REPO_URL="https://github.com/Digital-Out-Of-Home/Berlin-dooh-device.git"
-BRANCH_NAME="main"
+BRANCH_NAME="update-vlc-player"
 
 if [ -d "$DIR/.git" ]; then
   echo "Repo already exists, updating..."

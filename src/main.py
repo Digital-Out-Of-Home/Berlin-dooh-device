@@ -2,9 +2,12 @@
 """VLC Playlist Player."""
 
 import logging
-import subprocess
+import signal
 import sys
+import time
 from pathlib import Path
+
+import vlc
 
 from config import BASE_DIR, get_device_id, setup_logging
 
@@ -16,8 +19,7 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 MEDIA_DIR = BASE_DIR / "media"
-VLC = Path("/usr/bin/vlc")
-VERSION = "1.9.2"
+VERSION = "1.10.0"
 
 
 # ============================================================================
@@ -25,7 +27,7 @@ VERSION = "1.9.2"
 # ============================================================================
 
 def play():
-    """Play playlist with VLC."""
+    """Play playlist with VLC using python-vlc bindings."""
     device_id = get_device_id()
     logger.info("Device: %s (v%s)", device_id, VERSION)
 
@@ -35,34 +37,57 @@ def play():
 
     logger.info("Playing %s", playlist)
 
-    vlc_args = [
-        str(VLC),
+    # Create VLC instance with the same flags as the old subprocess call
+    instance = vlc.Instance(
         "--intf", "dummy",
         "--fullscreen",
         "--no-mouse-events",
         "--no-keyboard-events",
-        "--loop",
         "--quiet",
         "--no-osd",
         "--no-xlib",
         "--aout", "alsa",
-        str(playlist)
-    ]
+    )
 
+    # Build a media list from the playlist file
+    media_list = instance.media_list_new()
+    media = instance.media_new(str(playlist))
+    media_list.add_media(media)
+
+    # Create list player and set it to loop
+    list_player = instance.media_list_player_new()
+    list_player.set_media_list(media_list)
+    list_player.set_playback_mode(vlc.PlaybackMode.loop)
+
+    # Set fullscreen on the underlying media player
+    player = list_player.get_media_player()
+    player.set_fullscreen(True)
+
+    # Start playback
+    list_player.play()
+
+    # Handle graceful shutdown
+    def _shutdown(signum, frame):
+        logger.info("Received signal %s, stopping playback...", signum)
+        list_player.stop()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, _shutdown)
+    signal.signal(signal.SIGTERM, _shutdown)
+
+    # Keep the process alive while VLC is playing
     try:
-        result = subprocess.run(
-            vlc_args,
-            stderr=subprocess.PIPE,
-            stdout=None,
-            text=True,
-            check=False
-        )
-        if result.returncode != 0:
-            if result.stderr:
-                logger.error("VLC stderr: %s", result.stderr)
-            sys.exit(f"VLC failed with exit code {result.returncode}")
+        while True:
+            state = player.get_state()
+            if state in (vlc.State.Ended, vlc.State.Error):
+                if state == vlc.State.Error:
+                    logger.error("VLC playback error")
+                    sys.exit(1)
+                break
+            time.sleep(1)
     except Exception as e:
-        logger.exception("Error running VLC: %s", e)
+        logger.exception("Error during VLC playback: %s", e)
+        list_player.stop()
         sys.exit(1)
 
 
