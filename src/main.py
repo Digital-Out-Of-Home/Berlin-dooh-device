@@ -44,7 +44,7 @@ def play():
         "--no-mouse-events",
         "--no-keyboard-events",
         "--no-osd",
-        "--vout", "drm",        # force DRM directly
+        "--vout", "mmal",    # Raspberry Pi vout
         "--no-audio",
     )
 
