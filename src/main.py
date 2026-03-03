@@ -43,8 +43,10 @@ def play():
         "--fullscreen",
         "--no-mouse-events",
         "--no-keyboard-events",
+        "--loop",
         "--no-osd",
-        "--vout", "mmal",    # Raspberry Pi vout
+        "--no-xlib",
+        "--aout", "alsa",
         "--no-audio",
     )
 
