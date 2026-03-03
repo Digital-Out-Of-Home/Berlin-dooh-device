@@ -43,7 +43,6 @@ def play():
         "--fullscreen",
         "--no-mouse-events",
         "--no-keyboard-events",
-        "--quiet",
         "--no-osd",
         "--no-xlib",
         "--aout", "alsa",
@@ -65,6 +64,13 @@ def play():
 
     # Start playback
     list_player.play()
+
+    time.sleep(2)
+
+    state = player.get_state()
+    print("State:", state)
+    print("VLC error:", player.get_media().get_mrl())
+
 
     # Handle graceful shutdown
     def _shutdown(signum, frame):
