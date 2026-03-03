@@ -45,7 +45,7 @@ def play():
         "--no-keyboard-events",
         "--no-osd",
         "--no-xlib",
-        "--aout", "alsa",
+        "--no-audio",
     )
 
     # Build a media list from the playlist file
