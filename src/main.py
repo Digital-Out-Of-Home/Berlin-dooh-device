@@ -37,17 +37,16 @@ def play():
 
     logger.info("Playing %s", playlist)
 
-    # Create VLC instance with the same flags as the old subprocess call
+    # Create VLC instance matching the old subprocess flags
     instance = vlc.Instance(
         "--intf", "dummy",
         "--fullscreen",
         "--no-mouse-events",
         "--no-keyboard-events",
         "--loop",
+        "--quiet",
         "--no-osd",
-        "--no-xlib",
         "--aout", "alsa",
-        "--no-audio",
     )
 
     # Build a media list from the playlist file
@@ -60,9 +59,7 @@ def play():
     list_player.set_media_list(media_list)
     list_player.set_playback_mode(vlc.PlaybackMode.loop)
 
-    # Set fullscreen on the underlying media player
     player = list_player.get_media_player()
-    player.set_fullscreen(True)
 
     # Start playback
     list_player.play()
@@ -70,8 +67,10 @@ def play():
     time.sleep(2)
 
     state = player.get_state()
-    print("State:", state)
-    print("VLC error:", player.get_media().get_mrl())
+    if state == vlc.State.Error:
+        logger.error("VLC failed to start playback")
+        sys.exit(1)
+    logger.info("Playback started, state: %s", state)
 
 
     # Handle graceful shutdown
