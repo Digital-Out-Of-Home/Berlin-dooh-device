@@ -37,7 +37,7 @@ def play():
 
     logger.info("Playing %s", playlist)
 
-    # Create VLC instance matching the old subprocess flags
+    # Create VLC instance
     instance = vlc.Instance(
         "--intf", "dummy",
         "--fullscreen",
@@ -45,10 +45,14 @@ def play():
         "--no-keyboard-events",
         "--loop",
         "--quiet",
-        "--verbose=0",
         "--no-osd",
+        "--no-video-title-show",
+        "--video-wallpaper",
         "--aout", "alsa",
     )
+
+    # Suppress VLC's direct-to-terminal log output
+    instance.log_unset()
 
     # Build a media list from the playlist file
     media_list = instance.media_list_new()
@@ -61,13 +65,11 @@ def play():
     list_player.set_playback_mode(vlc.PlaybackMode.loop)
 
     player = list_player.get_media_player()
+    player.set_fullscreen(True)
 
     # Start playback
     list_player.play()
     time.sleep(2)
-
-    # Set fullscreen after playback starts (before start causes parent window error)
-    player.set_fullscreen(True)
 
     state = player.get_state()
     if state == vlc.State.Error:
