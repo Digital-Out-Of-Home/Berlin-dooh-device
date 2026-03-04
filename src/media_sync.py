@@ -2,6 +2,7 @@
 """Media Sync from Dropbox with safety measures. Usage: python media_sync.py"""
 import logging
 import os
+import signal
 import sys
 import tempfile
 import time
@@ -25,6 +26,7 @@ config = load_config()
 MEDIA_DIR = BASE_DIR / "media"
 STAGING_DIR = BASE_DIR / ".media_staging"
 SYNC_LOCK = Path("/tmp/vlc-sync.lock")
+PLAYER_PID_FILE = Path("/tmp/vlc-player.pid")
 LOCK_STALE_SECONDS = 60 * 60  # 1 hour before lock is considered stale
 
 DROPBOX_URL = "" # Deprecated
@@ -253,6 +255,29 @@ def get_playlist_media_names(playlist_path):
     return filenames
 
 
+def notify_player_reload():
+    """Send SIGUSR1 to the running VLC player so it hot-reloads the playlist."""
+    if not PLAYER_PID_FILE.exists():
+        logger.debug("Player PID file not found — player may not be running")
+        return
+
+    try:
+        pid = int(PLAYER_PID_FILE.read_text().strip())
+    except (ValueError, OSError) as e:
+        logger.warning("Could not read player PID file: %s", e)
+        return
+
+    if not is_process_running(pid):
+        logger.debug("Player process (PID %s) is not running", pid)
+        return
+
+    try:
+        os.kill(pid, signal.SIGUSR1)
+        logger.info("Sent reload signal (SIGUSR1) to player (PID %s)", pid)
+    except OSError as e:
+        logger.warning("Failed to signal player (PID %s): %s", pid, e)
+
+
 def sync(force: bool = False):
     """
     Sync Logic:
@@ -326,6 +351,10 @@ def sync(force: bool = False):
             logger.info("Updated playlist")
         except Exception as e:
             logger.error("Error writing playlist: %s", e)
+            return
+
+        # Signal the running player to pick up the new playlist
+        notify_player_reload()
 
         logger.info("Sync complete")
     except Exception as e:
