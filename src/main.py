@@ -45,6 +45,7 @@ def play():
         "--no-keyboard-events",
         "--loop",
         "--quiet",
+        "--verbose=0",
         "--no-osd",
         "--aout", "alsa",
     )
@@ -63,14 +64,15 @@ def play():
 
     # Start playback
     list_player.play()
-
     time.sleep(2)
+
+    # Set fullscreen after playback starts (before start causes parent window error)
+    player.set_fullscreen(True)
 
     state = player.get_state()
     if state == vlc.State.Error:
         logger.error("VLC failed to start playback")
         sys.exit(1)
-    logger.info("Playback started, state: %s", state)
 
 
     # Handle graceful shutdown
