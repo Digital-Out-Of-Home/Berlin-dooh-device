@@ -2,6 +2,7 @@
 """VLC Playlist Player."""
 
 import logging
+import os
 import signal
 import sys
 import time
@@ -37,6 +38,10 @@ def play():
 
     logger.info("Playing %s", playlist)
 
+    # Ensure Wayland display is available (Pi 5 uses Wayfire compositor)
+    os.environ.setdefault("WAYLAND_DISPLAY", "wayland-1")
+    os.environ.setdefault("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")
+
     # Create VLC instance
     instance = vlc.Instance(
         "--intf", "dummy",
@@ -44,10 +49,9 @@ def play():
         "--no-mouse-events",
         "--no-keyboard-events",
         "--loop",
-        "--quiet",
         "--no-osd",
         "--no-video-title-show",
-        "--video-wallpaper",
+        "--no-xlib",
         "--aout", "alsa",
     )
 
@@ -75,7 +79,6 @@ def play():
     if state == vlc.State.Error:
         logger.error("VLC failed to start playback")
         sys.exit(1)
-
 
     # Handle graceful shutdown
     def _shutdown(signum, frame):
